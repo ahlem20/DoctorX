@@ -6,7 +6,7 @@ const isLocal = typeof window !== 'undefined' &&
    window.location.hostname === '');
 
 const api = axios.create({
-  baseURL: isLocal ? 'http://localhost:5000/api' : 'https://maclinicbackend.onrender.com/api',
+  baseURL: isLocal ? 'http://localhost:5000/api' : 'https://doctorxb.onrender.com/api',
 });
 
 api.interceptors.request.use(
