@@ -7,13 +7,22 @@ import { Search, Plus, Printer, FileText, Calendar, User, UserCheck, Trash2 } fr
 import api from '../api';
 import AddPrescriptionModal from '../components/AddPrescriptionModal';
 import AddPatientModal from '../components/AddPatientModal';
+import { useTranslation } from 'react-i18next';
+import { useModal } from '../context/ModalContext';
 
 export default function Prescriptions() {
+  const { t, i18n } = useTranslation('group2');
   const [prescriptions, setPrescriptions] = useState([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
+  const { setModalOpen } = useModal();
+
+  useEffect(() => {
+    setModalOpen(isModalOpen || isPatientModalOpen);
+    return () => setModalOpen(false);
+  }, [isModalOpen, isPatientModalOpen, setModalOpen]);
 
   const fetchPrescriptions = async () => {
     try {
@@ -37,13 +46,13 @@ export default function Prescriptions() {
   );
 
   const handleDelete = async (id) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer cette ordonnance ?")) {
+    if (window.confirm(t('prescriptions.confirmDelete'))) {
       try {
         await api.delete(`/prescriptions/${id}`);
         fetchPrescriptions();
       } catch (error) {
         console.error('Failed to delete prescription', error);
-        alert('Erreur lors de la suppression');
+        alert(t('prescriptions.errorDelete'));
       }
     }
   };
@@ -56,7 +65,7 @@ export default function Prescriptions() {
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
           <Input
             type="search"
-            placeholder="Rechercher par nom du patient ou médecin..."
+            placeholder={t('prescriptions.searchPlaceholder')}
             className="glass-input pl-10 h-10 w-full bg-white/70 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -68,7 +77,7 @@ export default function Prescriptions() {
           className="h-10 px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10 cursor-pointer active:scale-95 shrink-0"
         >
           <Plus className="h-4.5 w-4.5" />
-          Nouvelle Ordonnance
+          {t('prescriptions.newPrescription')}
         </button>
       </div>
 
@@ -79,12 +88,12 @@ export default function Prescriptions() {
             <Table>
               <TableHeader className="bg-slate-50/70 border-b border-slate-100">
                 <TableRow>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Date de prescription</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Détails du Patient</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Médecin Traitant</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Médicaments</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-right">Frais de Consultation</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-right">Actions</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('prescriptions.prescriptionDate')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('prescriptions.patientDetails')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('prescriptions.treatingDoctor')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('prescriptions.medicines')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-right">{t('prescriptions.consultationFee')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-right">{t('prescriptions.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -93,7 +102,7 @@ export default function Prescriptions() {
                     <TableCell colSpan={6} className="h-32 text-center text-slate-400 animate-pulse">
                       <div className="flex flex-col items-center justify-center gap-2">
                         <FileText className="h-6 w-6 text-indigo-500 animate-spin" />
-                        <span className="font-semibold text-xs">Récupération des ordonnances...</span>
+                        <span className="font-semibold text-xs">{t('prescriptions.loading')}</span>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -107,7 +116,7 @@ export default function Prescriptions() {
                       <TableCell className="py-4 px-6">
                         <span className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold whitespace-nowrap">
                           <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                          {new Date(script.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(script.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       </TableCell>
 
@@ -117,7 +126,7 @@ export default function Prescriptions() {
                             {script.patient?.fullName ? script.patient.fullName.charAt(0) : 'U'}
                           </div>
                           <div>
-                            <p className="font-bold text-slate-900">{script.patient?.fullName || <span className="text-rose-500">Inconnu</span>}</p>
+                            <p className="font-bold text-slate-900">{script.patient?.fullName || <span className="text-rose-500">{t('prescriptions.unknown')}</span>}</p>
                             <p className="text-[9px] text-slate-400 font-semibold">UID: {script.patient?._id?.substring(18) || 'N/A'}</p>
                           </div>
                         </div>
@@ -133,7 +142,7 @@ export default function Prescriptions() {
                       <TableCell className="py-4 px-6 text-slate-600">
                         <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-indigo-50/60 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-100/50 shadow-sm shadow-indigo-100/10">
                           <FileText className="h-3.5 w-3.5 text-indigo-500" />
-                          {script.medicines?.length || 0} articles
+                          {t('prescriptions.items', { count: script.medicines?.length || 0 })}
                         </span>
                       </TableCell>
 
@@ -152,7 +161,7 @@ export default function Prescriptions() {
                             className="h-8 px-3 rounded-lg text-xs font-bold text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-200 hover:border-transparent transition duration-200 inline-flex items-center justify-center gap-1.5 active:scale-95 cursor-pointer"
                           >
                             <Printer className="h-3.5 w-3.5" />
-                            Imprimer
+                            {t('prescriptions.print')}
                           </a>
                           <button
                             onClick={() => handleDelete(script._id)}
@@ -169,8 +178,8 @@ export default function Prescriptions() {
                     <TableCell colSpan={6} className="h-32 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <FileText className="h-8 w-8 text-slate-200 animate-pulse" />
-                        <p className="font-semibold text-slate-500">Aucune ordonnance enregistrée</p>
-                        <p className="text-xs text-slate-400">Ajoutez une nouvelle ordonnance en utilisant le bouton ci-dessus.</p>
+                        <p className="font-semibold text-slate-500">{t('prescriptions.noPrescriptions')}</p>
+                        <p className="text-xs text-slate-400">{t('prescriptions.addPrescriptionHint')}</p>
                       </div>
                     </TableCell>
                   </TableRow>

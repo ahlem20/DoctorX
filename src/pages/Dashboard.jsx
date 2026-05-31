@@ -4,21 +4,27 @@ import { Users, UserPlus, FileText, Coins, Activity, ArrowUpRight, Sparkles, Tre
 import api from '../api';
 import AddPatientModal from '../components/AddPatientModal';
 import AddPrescriptionModal from '../components/AddPrescriptionModal';
+import { useOutletContext } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function Dashboard() {
+  const { t } = useTranslation('group1');
   const [stats, setStats] = useState({
     totalPatients: 0,
     patientsToday: 0,
     recentPrescriptions: 0,
     dailyRevenue: 0,
   });
-
   const [activity, setActivity] = useState([]);
 
   const [isPatientModalOpen, setIsPatientModalOpen] = useState(false);
   const [isPrescriptionModalOpen, setIsPrescriptionModalOpen] = useState(false);
 
-  const isModalOpen = isPatientModalOpen;
+// To this:
+  const [isModalOpen, setIsModalOpen] = useOutletContext();
+  useEffect(() => {
+    setIsModalOpen(isPatientModalOpen || isPrescriptionModalOpen);
+  }, [isPatientModalOpen, isPrescriptionModalOpen]);
 
   const fetchStatsAndActivity = async () => {
     try {
@@ -39,33 +45,33 @@ export default function Dashboard() {
 
   const statCards = [
     {
-      title: 'Total Patients',
+      title: t('dashboard.stat.totPatients'),
       value: stats.totalPatients,
-      description: 'Dossiers actifs',
+      description: t('dashboard.stat.totPatientsDesc'),
       icon: Users,
       color: 'text-indigo-500',
       bg: 'bg-indigo-50 dark:bg-indigo-950/30 border-indigo-100 dark:border-indigo-900/30',
     },
     {
-      title: 'Patients du Jour',
+      title: t('dashboard.stat.todayPatients'),
       value: stats.patientsToday,
-      description: 'Programmés ou sans rdv',
+      description: t('dashboard.stat.todayPatientsDesc'),
       icon: UserPlus,
       color: 'text-teal-500',
       bg: 'bg-teal-50 dark:bg-teal-950/30 border-teal-100 dark:border-teal-900/30',
     },
     {
-      title: 'Ordonnances Récentes',
+      title: t('dashboard.stat.recentPresc'),
       value: stats.recentPrescriptions,
-      description: 'Articles prescrits cette semaine',
+      description: t('dashboard.stat.recentPrescDesc'),
       icon: FileText,
       color: 'text-purple-500',
       bg: 'bg-purple-50 dark:bg-purple-950/30 border-purple-100 dark:border-purple-900/30',
     },
     {
-      title: 'Revenus du Jour',
+      title: t('dashboard.stat.todayRev'),
       value: `${stats.dailyRevenue.toLocaleString()} DA`,
-      description: "Revenus générés aujourd'hui",
+      description: t('dashboard.stat.todayRevDesc'),
       icon: Coins,
       color: 'text-amber-500',
       bg: 'bg-amber-50 dark:bg-amber-950/30 border-amber-100 dark:border-amber-900/30',
@@ -124,16 +130,16 @@ export default function Dashboard() {
               <div>
                 <CardTitle className="text-md font-bold text-slate-800 flex items-center gap-2">
                   <Activity className="h-4 w-4 text-indigo-500" />
-                  Journal des Opérations
+                  {t('dashboard.activity.title')}
                 </CardTitle>
                 <p className="text-xs text-slate-400 font-medium">
-                  Historique en temps réel des patients et consultations
+                  {t('dashboard.activity.subtitle')}
                 </p>
               </div>
 
               <span className="px-2 py-0.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full tracking-wider uppercase flex items-center gap-1">
                 <Sparkles className="h-2.5 w-2.5 animate-pulse" />
-                En Direct
+                {t('dashboard.activity.live')}
               </span>
             </CardHeader>
 
@@ -186,9 +192,9 @@ export default function Dashboard() {
                 ) : (
                   <div className="text-sm text-slate-400 text-center py-12 flex flex-col items-center justify-center">
                     <Activity className="h-8 w-8 text-slate-200 mb-2 animate-bounce" />
-                    <p className="font-semibold">Aucune activité récente</p>
+                    <p className="font-semibold">{t('dashboard.activity.noAct')}</p>
                     <p className="text-xs text-slate-500">
-                      Les nouvelles transactions apparaîtront ici.
+                      {t('dashboard.activity.noActDesc')}
                     </p>
                   </div>
                 )}
@@ -201,10 +207,10 @@ export default function Dashboard() {
             <CardHeader className="border-b border-slate-100/80 pb-4">
               <CardTitle className="text-md font-bold text-slate-800 flex items-center gap-2">
                 <TrendingUp className="h-4 w-4 text-teal-500" />
-                Opérations Rapides
+                {t('dashboard.actions.title')}
               </CardTitle>
               <p className="text-xs text-slate-400 font-medium">
-                Effectuer les tâches cliniques principales
+                {t('dashboard.actions.subtitle')}
               </p>
             </CardHeader>
 
@@ -217,10 +223,10 @@ export default function Dashboard() {
                   <UserPlus className="h-6 w-6 text-indigo-500 group-hover:scale-110 transition-transform" />
                 </div>
                 <span className="text-sm font-bold text-slate-700 group-hover:text-indigo-700 block">
-                  Enregistrer Patient
+                  {t('dashboard.actions.addPatient')}
                 </span>
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Créer un nouveau dossier médical
+                  {t('dashboard.actions.addPatientDesc')}
                 </span>
               </button>
 
@@ -232,10 +238,10 @@ export default function Dashboard() {
                   <FileText className="h-6 w-6 text-teal-500 group-hover:scale-110 transition-transform" />
                 </div>
                 <span className="text-sm font-bold text-slate-700 group-hover:text-teal-700 block">
-                  Rédiger Ordonnance
+                  {t('dashboard.actions.addPresc')}
                 </span>
                 <span className="text-[10px] text-slate-400 mt-1 block">
-                  Créer une prescription et honoraires
+                  {t('dashboard.actions.addPrescDesc')}
                 </span>
               </button>
             </CardContent>

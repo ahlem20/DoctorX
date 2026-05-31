@@ -6,8 +6,10 @@ import { Label } from '../components/ui/label';
 import { User, Lock, Mail, Save, AlertCircle, Trash2 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 export default function Settings() {
+  const { t } = useTranslation('group2');
   const { user, login } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -30,7 +32,7 @@ export default function Settings() {
           const { data } = await api.get('/auth/users');
           setStaffList(data);
         } catch (error) {
-          console.error('Échec de la récupération de la liste du personnel');
+          console.error(t('settings.errorFetchStaff'));
         }
       };
       fetchStaff();
@@ -47,22 +49,22 @@ export default function Settings() {
         ...currentPermissions,
         viewFinance: !currentPermissions?.viewFinance
       };
-      const { data } = await api.put(`/auth/users/${staffId}/permissions`, { permissions: updatedPermissions });
+      await api.put(`/auth/users/${staffId}/permissions`, { permissions: updatedPermissions });
       
       setStaffList(prevList => prevList.map(s => s._id === staffId ? { ...s, permissions: updatedPermissions } : s));
     } catch (error) {
-      alert('Échec de la mise à jour des permissions');
+      alert(t('settings.errorUpdatePermissions'));
     }
   };
 
   const handleDeleteStaff = async (staffId) => {
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer le compte de ce membre du personnel ?")) {
+    if (window.confirm(t('settings.confirmDeleteStaff'))) {
       try {
         await api.delete(`/auth/users/${staffId}`);
         setStaffList(prevList => prevList.filter(s => s._id !== staffId));
       } catch (error) {
         console.error(error);
-        alert('Échec de la suppression du compte');
+        alert(t('settings.errorDeleteStaff'));
       }
     }
   };
@@ -72,7 +74,7 @@ export default function Settings() {
     setMessage({ type: '', text: '' });
 
     if (formData.password && formData.password !== formData.confirmPassword) {
-      return setMessage({ type: 'error', text: 'Les mots de passe ne correspondent pas' });
+      return setMessage({ type: 'error', text: t('settings.passwordMismatch') });
     }
 
     setLoading(true);
@@ -88,10 +90,10 @@ export default function Settings() {
       localStorage.setItem('userInfo', JSON.stringify(data));
       login(data);
       
-      setMessage({ type: 'success', text: 'Profil mis à jour avec succès !' });
+      setMessage({ type: 'success', text: t('settings.profileUpdated') });
       setFormData({ ...formData, password: '', confirmPassword: '' });
     } catch (error) {
-      setMessage({ type: 'error', text: error.response?.data?.message || 'Échec de la mise à jour du profil' });
+      setMessage({ type: 'error', text: error.response?.data?.message || t('settings.errorUpdateProfile') });
     } finally {
       setLoading(false);
     }
@@ -100,14 +102,14 @@ export default function Settings() {
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-10">
       <div className="mb-8">
-        <h1 className="text-2xl font-bold text-gray-900">Paramètres du compte</h1>
-        <p className="text-gray-500">Gérez votre profil personnel, les détails de la clinique et vos préférences de sécurité.</p>
+        <h1 className="text-2xl font-bold text-gray-900">{t('settings.accountSettings')}</h1>
+        <p className="text-gray-500">{t('settings.settingsDescription')}</p>
       </div>
 
       <Card className="border-0 shadow-sm ring-1 ring-gray-200">
         <CardHeader className="border-b border-gray-100 bg-gray-50/50 pb-6">
           <CardTitle className="text-lg flex items-center gap-2">
-            <User className="h-5 w-5 text-blue-600" /> Informations Cliniques & Personnelles
+            <User className="h-5 w-5 text-blue-600" /> {t('settings.personalInfo')}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-6">
@@ -122,7 +124,7 @@ export default function Settings() {
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="name">Nom Complet</Label>
+                <Label htmlFor="name">{t('settings.fullName')}</Label>
                 <div className="relative">
                   <User className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                   <Input 
@@ -137,7 +139,7 @@ export default function Settings() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="email">Adresse E-mail</Label>
+                <Label htmlFor="email">{t('settings.email')}</Label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
                   <Input 
@@ -153,22 +155,22 @@ export default function Settings() {
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="phone">Numéro de Téléphone</Label>
+                <Label htmlFor="phone">{t('settings.phone')}</Label>
                 <Input 
                   id="phone" 
                   name="phone" 
-                  placeholder="ex: +213 555 123 456"
+                  placeholder={t('settings.phonePlaceholder')}
                   value={formData.phone} 
                   onChange={handleChange} 
                 />
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="address">Adresse de la Clinique</Label>
+                <Label htmlFor="address">{t('settings.address')}</Label>
                 <Input 
                   id="address" 
                   name="address" 
-                  placeholder="ex: 123 Avenue de la Santé"
+                  placeholder={t('settings.addressPlaceholder')}
                   value={formData.address} 
                   onChange={handleChange} 
                 />
@@ -177,27 +179,27 @@ export default function Settings() {
 
             <div className="pt-6 border-t border-gray-100">
               <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2 mb-4">
-                <Lock className="h-4 w-4 text-gray-500" /> Modifier le Mot de Passe
+                <Lock className="h-4 w-4 text-gray-500" /> {t('settings.changePassword')}
               </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Nouveau Mot de Passe</Label>
+                  <Label htmlFor="password">{t('settings.newPassword')}</Label>
                   <Input 
                     id="password" 
                     name="password" 
                     type="password" 
-                    placeholder="Laisser vide pour conserver l'actuel" 
+                    placeholder={t('settings.leaveEmpty')} 
                     value={formData.password} 
                     onChange={handleChange} 
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirmer Nouveau Mot de Passe</Label>
+                  <Label htmlFor="confirmPassword">{t('settings.confirmPassword')}</Label>
                   <Input 
                     id="confirmPassword" 
                     name="confirmPassword" 
                     type="password" 
-                    placeholder="Confirmer nouveau mot de passe" 
+                    placeholder={t('settings.confirmPasswordPlaceholder')} 
                     value={formData.confirmPassword} 
                     onChange={handleChange} 
                   />
@@ -207,7 +209,7 @@ export default function Settings() {
 
             <div className="pt-6 border-t border-gray-100 flex justify-end">
               <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white min-w-[140px]">
-                {loading ? 'Enregistrement...' : <><Save className="h-4 w-4 mr-2" /> Enregistrer</>}
+                {loading ? t('settings.saving') : <><Save className="h-4 w-4 mr-2" /> {t('settings.save')}</>}
               </Button>
             </div>
           </form>
@@ -219,7 +221,7 @@ export default function Settings() {
         <Card className="border-0 shadow-sm ring-1 ring-gray-200 mt-8">
           <CardHeader className="border-b border-gray-100 bg-gray-50/50 pb-6">
             <CardTitle className="text-lg flex items-center gap-2">
-              <User className="h-5 w-5 text-blue-600" /> Gestion des Permissions
+              <User className="h-5 w-5 text-blue-600" /> {t('settings.permissionsManagement')}
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
@@ -231,7 +233,7 @@ export default function Settings() {
                     <p className="text-sm text-gray-500">{staff.role} • {staff.email}</p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-sm font-medium text-gray-700">Autoriser accès Comptabilité:</span>
+                    <span className="text-sm font-medium text-gray-700">{t('settings.allowFinance')}</span>
                     <button
                       onClick={() => handleTogglePermission(staff._id, staff.permissions)}
                       className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 ${staff.permissions?.viewFinance ? 'bg-blue-600' : 'bg-gray-200'}`}
@@ -246,7 +248,7 @@ export default function Settings() {
                     <button
                       onClick={() => handleDeleteStaff(staff._id)}
                       className="ml-2 h-8 w-8 flex items-center justify-center rounded-lg text-rose-500 hover:text-white hover:bg-rose-500 border border-rose-200 hover:border-transparent transition duration-200 active:scale-95"
-                      title="Supprimer le compte"
+                      title={t('settings.deleteAccount')}
                     >
                       <Trash2 className="h-4 w-4" />
                     </button>
@@ -254,7 +256,7 @@ export default function Settings() {
                 </div>
               ))}
               {staffList.length === 0 && (
-                <div className="p-6 text-center text-gray-500">Aucun autre membre du personnel trouvé.</div>
+                <div className="p-6 text-center text-gray-500">{t('settings.noOtherStaff')}</div>
               )}
             </div>
           </CardContent>

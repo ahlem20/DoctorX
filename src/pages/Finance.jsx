@@ -7,8 +7,10 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import api from '../api';
+import { useTranslation } from 'react-i18next';
 
 export default function Finance() {
+  const { t, i18n } = useTranslation('group1');
   const [prescriptions, setPrescriptions] = useState([]);
   const [charges, setCharges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -64,7 +66,7 @@ export default function Finance() {
         d.setHours(0, 0, 0, 0);
         return {
           date: d,
-          label: d.toLocaleDateString('fr-FR', { weekday: 'short' }),
+          label: d.toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { weekday: 'short' }),
           revenue: 0,
           expenses: 0,
           profit: 0
@@ -136,7 +138,7 @@ export default function Finance() {
 
   useEffect(() => {
     fetchFinances();
-  }, []);
+  }, [i18n.language]);
 
   const handleAddCharge = async (e) => {
     e.preventDefault();
@@ -165,7 +167,7 @@ export default function Finance() {
   };
 
   const handleDeleteCharge = async (id) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer cette charge ?')) return;
+    if (!window.confirm(t('finance.confirmDelete'))) return;
 
     try {
       await api.delete(`/charges/${id}`);
@@ -192,30 +194,41 @@ export default function Finance() {
     }
   };
 
+  const getCategoryLabel = (cat) => {
+    switch (cat) {
+      case 'Loyer': return t('finance.cat.rent');
+      case 'Électricité/Eau': return t('finance.cat.elecWater');
+      case 'Équipement': return t('finance.cat.equip');
+      case 'Salaires': return t('finance.cat.salary');
+      case 'Fournitures': return t('finance.cat.supplies');
+      default: return t('finance.cat.other');
+    }
+  };
+
   const statCards = [
     {
-      title: 'Revenus Totaux',
+      title: t('finance.stat.totRev'),
       value: stats.totalRevenue,
-      subtext: `Ce mois: +${stats.thisMonthRevenue.toLocaleString()} DA`,
-      description: 'Revenus historiques',
+      subtext: `${t('finance.stat.thisMonth')} +${stats.thisMonthRevenue.toLocaleString()} DA`,
+      description: t('finance.stat.revHist'),
       icon: Coins,
       color: 'text-teal-500',
       bg: 'bg-teal-50 dark:bg-teal-950/30 border-teal-100 dark:border-teal-900/30'
     },
     {
-      title: 'Charges Totales',
+      title: t('finance.stat.totExp'),
       value: stats.totalExpenses,
-      subtext: `Ce mois: -${stats.thisMonthExpenses.toLocaleString()} DA`,
-      description: 'Dépenses et charges opérationnelles',
+      subtext: `${t('finance.stat.thisMonth')} -${stats.thisMonthExpenses.toLocaleString()} DA`,
+      description: t('finance.stat.expDesc'),
       icon: TrendingDown,
       color: 'text-rose-500',
       bg: 'bg-rose-50 dark:bg-rose-950/30 border-rose-100 dark:border-rose-900/30'
     },
     {
-      title: 'Bénéfice Net',
+      title: t('finance.stat.netProf'),
       value: stats.netProfit,
-      subtext: `Ce mois: ${stats.thisMonthProfit >= 0 ? '+' : ''}${stats.thisMonthProfit.toLocaleString()} DA`,
-      description: 'Bénéfice net après déduction',
+      subtext: `${t('finance.stat.thisMonth')} ${stats.thisMonthProfit >= 0 ? '+' : ''}${stats.thisMonthProfit.toLocaleString()} DA`,
+      description: t('finance.stat.profDesc'),
       icon: Wallet,
       color: stats.netProfit >= 0 ? 'text-indigo-500' : 'text-rose-500',
       bg: stats.netProfit >= 0 
@@ -229,7 +242,7 @@ export default function Finance() {
       <div className="flex justify-center items-center py-24 text-slate-500 animate-pulse">
         <div className="flex flex-col items-center gap-2">
           <Activity className="h-8 w-8 text-indigo-500 animate-spin" />
-          <span className="font-semibold text-xs">Assemblage du registre financier...</span>
+          <span className="font-semibold text-xs">{t('finance.loading')}</span>
         </div>
       </div>
     );
@@ -267,11 +280,11 @@ export default function Finance() {
           <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100/80 pb-4">
             <div>
               <CardTitle className="text-md font-bold text-slate-800 flex items-center gap-2">
-                <Activity className="h-4 w-4 text-indigo-500" /> Aperçu Financier (7 Derniers Jours)
+                <Activity className="h-4 w-4 text-indigo-500" /> {t('finance.chart.title')}
               </CardTitle>
-              <p className="text-xs text-slate-400 font-medium">Flux quotidiens des revenus, dépenses et bénéfice net</p>
+              <p className="text-xs text-slate-400 font-medium">{t('finance.chart.subtitle')}</p>
             </div>
-            <span className="px-2 py-0.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full tracking-wider uppercase">Cycle de 7 Jours</span>
+            <span className="px-2 py-0.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full tracking-wider uppercase">{t('finance.chart.cycle')}</span>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="h-72 w-full mt-2">
@@ -306,9 +319,9 @@ export default function Finance() {
                       fontWeight: 600
                     }}
                   />
-                  <Area type="monotone" name="Revenus" dataKey="revenue" stroke="#14b8a6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
-                  <Area type="monotone" name="Charges" dataKey="expenses" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
-                  <Area type="monotone" name="Bénéfice Net" dataKey="profit" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
+                  <Area type="monotone" name={t('finance.chart.rev')} dataKey="revenue" stroke="#14b8a6" strokeWidth={3} fillOpacity={1} fill="url(#colorRevenue)" />
+                  <Area type="monotone" name={t('finance.chart.exp')} dataKey="expenses" stroke="#f43f5e" strokeWidth={3} fillOpacity={1} fill="url(#colorExpenses)" />
+                  <Area type="monotone" name={t('finance.stat.netProf')} dataKey="profit" stroke="#6366f1" strokeWidth={3} fillOpacity={1} fill="url(#colorProfit)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
@@ -320,9 +333,9 @@ export default function Finance() {
           <CardHeader className="border-b border-slate-100/80 pb-4">
             <CardTitle className="text-md font-bold text-slate-800 flex items-center gap-2">
               <CreditCard className="h-4 w-4 text-slate-400" />
-              Consultations Récentes
+              {t('finance.ledger.title')}
             </CardTitle>
-            <p className="text-xs text-slate-400 font-medium">Derniers flux de facturation entrants</p>
+            <p className="text-xs text-slate-400 font-medium">{t('finance.ledger.subtitle')}</p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="max-h-[300px] overflow-y-auto">
@@ -341,7 +354,7 @@ export default function Finance() {
                           </div>
                           <div>
                             <p className="font-bold text-slate-800 text-xs truncate max-w-[120px]">{p.patient?.fullName || 'Unknown'}</p>
-                            <p className="text-[9px] text-slate-400 font-semibold">{new Date(p.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</p>
+                            <p className="text-[9px] text-slate-400 font-semibold">{new Date(p.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { month: 'short', day: 'numeric' })}</p>
                           </div>
                         </div>
                       </TableCell>
@@ -357,7 +370,7 @@ export default function Finance() {
                       <TableCell colSpan={2} className="text-center py-12 text-slate-400">
                         <div className="flex flex-col items-center gap-1 justify-center">
                           <Receipt className="h-6 w-6 text-slate-200 animate-pulse" />
-                          <p className="text-xs font-semibold text-slate-500">Aucune transaction enregistrée</p>
+                          <p className="text-xs font-semibold text-slate-500">{t('finance.ledger.noTrans')}</p>
                         </div>
                       </TableCell>
                     </TableRow>
@@ -376,18 +389,18 @@ export default function Finance() {
           <CardHeader className="border-b border-slate-100/80 pb-4">
             <CardTitle className="text-md font-bold text-slate-800 flex items-center gap-2">
               <Plus className="h-4 w-4 text-indigo-500" />
-              Enregistrer une Charge
+              {t('finance.addCharge.title')}
             </CardTitle>
-            <p className="text-xs text-slate-400 font-medium">Ajouter une nouvelle dépense opérationnelle</p>
+            <p className="text-xs text-slate-400 font-medium">{t('finance.addCharge.subtitle')}</p>
           </CardHeader>
           <CardContent className="pt-6">
             <form onSubmit={handleAddCharge} className="space-y-4">
               <div className="space-y-2">
-                <Label htmlFor="desc">Description</Label>
+                <Label htmlFor="desc">{t('finance.addCharge.desc')}</Label>
                 <Input
                   id="desc"
                   type="text"
-                  placeholder="Ex: Loyer, Electricité..."
+                  placeholder={t('finance.addCharge.descPlaceholder')}
                   value={desc}
                   onChange={(e) => setDesc(e.target.value)}
                   required
@@ -396,11 +409,11 @@ export default function Finance() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="amount">Montant (DA)</Label>
+                  <Label htmlFor="amount">{t('finance.addCharge.amount')}</Label>
                   <Input
                     id="amount"
                     type="number"
-                    placeholder="Montant"
+                    placeholder={t('finance.addCharge.amountPlaceholder')}
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     required
@@ -408,25 +421,25 @@ export default function Finance() {
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label htmlFor="category">Catégorie</Label>
+                  <Label htmlFor="category">{t('finance.addCharge.cat')}</Label>
                   <select
                     id="category"
                     value={category}
                     onChange={(e) => setCategory(e.target.value)}
                     className="flex h-10 w-full rounded-md border border-slate-200 bg-white px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 dark:border-slate-800 dark:bg-slate-950"
                   >
-                    <option value="Loyer">Loyer</option>
-                    <option value="Électricité/Eau">Électricité/Eau</option>
-                    <option value="Équipement">Équipement</option>
-                    <option value="Salaires">Salaires</option>
-                    <option value="Fournitures">Fournitures</option>
-                    <option value="Autre">Autre</option>
+                    <option value="Loyer">{t('finance.cat.rent')}</option>
+                    <option value="Électricité/Eau">{t('finance.cat.elecWater')}</option>
+                    <option value="Équipement">{t('finance.cat.equip')}</option>
+                    <option value="Salaires">{t('finance.cat.salary')}</option>
+                    <option value="Fournitures">{t('finance.cat.supplies')}</option>
+                    <option value="Autre">{t('finance.cat.other')}</option>
                   </select>
                 </div>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="date">Date</Label>
+                <Label htmlFor="date">{t('finance.table.date')}</Label>
                 <Input
                   id="date"
                   type="date"
@@ -437,7 +450,7 @@ export default function Finance() {
               </div>
 
               <Button type="submit" className="w-full bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer" disabled={submitting}>
-                {submitting ? 'Ajout en cours...' : 'Ajouter la Charge'}
+                {submitting ? t('finance.addCharge.adding') : t('finance.addCharge.btn')}
               </Button>
             </form>
           </CardContent>
@@ -448,20 +461,20 @@ export default function Finance() {
           <CardHeader className="border-b border-slate-100/80 pb-4">
             <CardTitle className="text-md font-bold text-slate-800 flex items-center gap-2">
               <Receipt className="h-4 w-4 text-rose-500" />
-              Registre des Charges
+              {t('finance.chargeLedger.title')}
             </CardTitle>
-            <p className="text-xs text-slate-400 font-medium">Historique complet des charges et dépenses</p>
+            <p className="text-xs text-slate-400 font-medium">{t('finance.chargeLedger.subtitle')}</p>
           </CardHeader>
           <CardContent className="p-0">
             <div className="max-h-[350px] overflow-y-auto">
               <Table>
                 <TableHeader>
                   <TableRow className="bg-slate-50/50 hover:bg-slate-50/50">
-                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3">Date</TableHead>
-                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3">Description</TableHead>
-                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3">Catégorie</TableHead>
-                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3 text-right">Montant</TableHead>
-                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3 text-center">Action</TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3">{t('finance.table.date')}</TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3">{t('finance.addCharge.desc')}</TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3">{t('finance.addCharge.cat')}</TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3 text-right">{t('finance.addCharge.amount')}</TableHead>
+                    <TableHead className="font-semibold text-slate-600 text-xs px-6 py-3 text-center">{t('finance.chargeLedger.action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -472,14 +485,14 @@ export default function Finance() {
                       style={{ animationDelay: `${index * 30}ms` }}
                     >
                       <TableCell className="px-6 py-3 text-xs text-slate-500 font-medium">
-                        {new Date(c.date).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric', year: 'numeric' })}
+                        {new Date(c.date).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { month: 'short', day: 'numeric', year: 'numeric' })}
                       </TableCell>
                       <TableCell className="px-6 py-3 text-xs font-bold text-slate-800">
                         {c.description}
                       </TableCell>
                       <TableCell className="px-6 py-3 text-xs">
                         <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border ${getCategoryBadgeClass(c.category)}`}>
-                          {c.category}
+                          {getCategoryLabel(c.category)}
                         </span>
                       </TableCell>
                       <TableCell className="px-6 py-3 text-xs font-bold text-right text-rose-600">
@@ -500,7 +513,7 @@ export default function Finance() {
                       <TableCell colSpan={5} className="text-center py-12 text-slate-400">
                         <div className="flex flex-col items-center gap-1 justify-center">
                           <Receipt className="h-6 w-6 text-slate-200" />
-                          <p className="text-xs font-semibold text-slate-500">Aucune charge enregistrée</p>
+                          <p className="text-xs font-semibold text-slate-500">{t('finance.chargeLedger.noCharges')}</p>
                         </div>
                       </TableCell>
                     </TableRow>

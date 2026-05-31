@@ -7,12 +7,21 @@ import { Search, Plus, UserPlus, Phone, Calendar, ArrowRight, User, Trash2 } fro
 import api from '../api';
 import AddPatientModal from '../components/AddPatientModal';
 import PatientDetailsModal from '../components/PatientDetailsModal';
+import { useTranslation } from 'react-i18next';
+import { useModal } from '../context/ModalContext';
 
 export default function PatientsList() {
+  const { t, i18n } = useTranslation('group2');
   const [patients, setPatients] = useState([]);
   const [search, setSearch] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedPatient, setSelectedPatient] = useState(null);
+  const { setModalOpen } = useModal();
+
+  useEffect(() => {
+    setModalOpen(isModalOpen || !!selectedPatient);
+    return () => setModalOpen(false);
+  }, [isModalOpen, selectedPatient, setModalOpen]);
 
   const fetchPatients = async () => {
     try {
@@ -29,14 +38,14 @@ export default function PatientsList() {
 
   const handleDeletePatient = async (id, e) => {
     e.stopPropagation();
-    if (window.confirm("Êtes-vous sûr de vouloir supprimer ce patient et tout son historique ?")) {
+    if (window.confirm(t('patientsList.confirmDelete'))) {
       try {
         await api.delete(`/patients/${id}`);
         fetchPatients();
         if (selectedPatient?._id === id) setSelectedPatient(null);
       } catch (error) {
         console.error('Failed to delete patient', error);
-        alert('Erreur lors de la suppression du patient');
+        alert(t('patientsList.errorDelete'));
       }
     }
   };
@@ -49,7 +58,7 @@ export default function PatientsList() {
           <Search className="absolute left-3.5 top-3 h-4 w-4 text-slate-400 group-focus-within:text-indigo-500 transition-colors" />
           <Input
             type="search"
-            placeholder="Rechercher des patients par nom ou téléphone..."
+            placeholder={t('patientsList.searchPlaceholder')}
             className="glass-input pl-10 h-10 w-full bg-white/70 border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -61,7 +70,7 @@ export default function PatientsList() {
           className="h-10 px-5 rounded-xl bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-500 hover:to-teal-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 hover:shadow-lg hover:shadow-indigo-500/10 cursor-pointer active:scale-95 shrink-0"
         >
           <Plus className="h-4.5 w-4.5" />
-          Ajouter Patient
+          {t('patientsList.addPatient')}
         </button>
       </div>
 
@@ -72,11 +81,11 @@ export default function PatientsList() {
             <Table>
               <TableHeader className="bg-slate-50/70 border-b border-slate-100">
                 <TableRow>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Détails du Patient</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Âge & Sexe</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Numéro de Téléphone</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">Inscrit le</TableHead>
-                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-right">Actions</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('patientsList.patientDetails')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('patientsList.ageAndGender')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('patientsList.phoneNumber')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-left">{t('patientsList.registeredOn')}</TableHead>
+                  <TableHead className="font-bold text-slate-800 h-12 py-3 px-6 text-right">{t('patientsList.actions')}</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -102,12 +111,12 @@ export default function PatientsList() {
 
                       <TableCell className="py-4 px-6 text-slate-600">
                         <div className="flex items-center gap-2">
-                          <span className="text-xs font-semibold">{patient.age} ans</span>
+                          <span className="text-xs font-semibold">{patient.age} {t('patientsList.yearsOld')}</span>
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${patient.gender === 'Male'
                               ? 'bg-blue-50 text-blue-700 border-blue-100'
                               : 'bg-rose-50 text-rose-700 border-rose-100'
                             }`}>
-                            {patient.gender}
+                            {patient.gender === 'Male' ? t('addPatientModal.male') : t('addPatientModal.female')}
                           </span>
                         </div>
                       </TableCell>
@@ -119,14 +128,14 @@ export default function PatientsList() {
                             {patient.phoneNumber}
                           </span>
                         ) : (
-                          <span className="text-xs text-slate-400 font-medium">Non Disponible</span>
+                          <span className="text-xs text-slate-400 font-medium">{t('patientsList.notAvailable')}</span>
                         )}
                       </TableCell>
 
                       <TableCell className="py-4 px-6 text-slate-600">
                         <span className="flex items-center gap-1.5 text-xs text-slate-500 font-semibold">
                           <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                          {new Date(patient.createdAt).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                          {new Date(patient.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { month: 'short', day: 'numeric', year: 'numeric' })}
                         </span>
                       </TableCell>
 
@@ -136,7 +145,7 @@ export default function PatientsList() {
                             onClick={() => setSelectedPatient(patient)}
                             className="h-8 px-3.5 rounded-lg text-xs font-bold text-indigo-600 hover:text-white hover:bg-indigo-600 border border-indigo-200 hover:border-transparent transition duration-200 flex items-center justify-center gap-1 inline-flex cursor-pointer active:scale-95"
                           >
-                            Voir Profil
+                            {t('patientsList.viewProfile')}
                             <ArrowRight className="h-3 w-3" />
                           </button>
                           <button
@@ -154,8 +163,8 @@ export default function PatientsList() {
                     <TableCell colSpan={5} className="h-32 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-2">
                         <User className="h-8 w-8 text-slate-200 animate-pulse" />
-                        <p className="font-semibold text-slate-500">Aucun patient trouvé</p>
-                        <p className="text-xs text-slate-400">Cliquez sur "Ajouter Patient" pour créer un dossier.</p>
+                        <p className="font-semibold text-slate-500">{t('patientsList.noPatients')}</p>
+                        <p className="text-xs text-slate-400">{t('patientsList.addPatientHint')}</p>
                       </div>
                     </TableCell>
                   </TableRow>

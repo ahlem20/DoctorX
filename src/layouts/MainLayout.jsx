@@ -1,24 +1,54 @@
 import { Outlet, Navigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, Users, FileText, Settings, LogOut, Activity, ChevronRight, Clock, Sparkles } from 'lucide-react';
+import { useModal } from '../context/ModalContext';
+import { useTranslation } from 'react-i18next';
+import { LayoutDashboard, Users, FileText, Settings, LogOut, Activity, ChevronRight, Clock, Sparkles, Calendar, MessageSquare, HelpCircle, Stethoscope, Languages } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useEffect, useState } from 'react';
+import NotificationsDropdown from '../components/NotificationsDropdown';
+import api from '../api';
 
 export default function MainLayout() {
   const { user, logout, loading } = useAuth();
   const location = useLocation();
-  const [greeting, setGreeting] = useState('Bon retour');
+  const { t, i18n } = useTranslation();
+  const { isModalOpen, setModalOpen } = useModal();
+  const [greeting, setGreeting] = useState('layout.greeting_default');
   const [time, setTime] = useState(new Date());
+  const [currentPatient, setCurrentPatient] = useState(null);
+
+  const isArabic = i18n.language === 'ar';
 
   useEffect(() => {
+    // Load current patient from localStorage
+    const saved = localStorage.getItem('current_patient');
+    if (saved) {
+      try {
+        setCurrentPatient(JSON.parse(saved));
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
+    const handlePatientChange = (e) => {
+      setCurrentPatient(e.detail);
+    };
+
+    window.addEventListener('currentPatientChanged', handlePatientChange);
+
+    // Licensing check removed
+
     // Time-based professional medical greeting
     const hrs = new Date().getHours();
-    if (hrs < 12) setGreeting('Bonjour');
-    else if (hrs < 18) setGreeting('Bon après-midi');
-    else setGreeting('Bonsoir');
+    if (hrs < 12) setGreeting('layout.greeting_morning');
+    else if (hrs < 18) setGreeting('layout.greeting_afternoon');
+    else setGreeting('layout.greeting_evening');
 
     const timer = setInterval(() => setTime(new Date()), 60000);
-    return () => clearInterval(timer);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('currentPatientChanged', handlePatientChange);
+    };
   }, []);
 
   if (loading) {
@@ -29,7 +59,7 @@ export default function MainLayout() {
             <div className="absolute h-16 w-16 animate-ping rounded-full bg-indigo-500/20" />
             <div className="relative h-12 w-12 animate-spin rounded-full border-4 border-indigo-500 border-t-teal-400" />
           </div>
-          <p className="text-sm font-semibold text-slate-400">Chargement de MaClinic...</p>
+          <p className="text-sm font-semibold text-slate-400">{t('layout.loading')}</p>
         </div>
       </div>
     );
@@ -39,35 +69,72 @@ export default function MainLayout() {
     return <Navigate to="/login" />;
   }
 
-  const navItems = [
-    { displayName: 'Tableau de bord', name: 'Dashboard', path: '/', icon: LayoutDashboard },
-    { displayName: 'Patients', name: 'Patients', path: '/patients', icon: Users },
-    { displayName: 'Ordonnances', name: 'Prescriptions', path: '/prescriptions', icon: FileText },
-  ];
-
-  if (user?.role === 'Doctor' || user?.permissions?.viewFinance) {
-    navItems.push({ displayName: 'Comptabilité', name: 'Finance', path: '/finance', icon: Activity });
+  // Nurse permission route guard: nurses can only access Appointments and Chat pages
+  if (user?.role === 'Nurse' && location.pathname !== '/appointments' && location.pathname !== '/chat') {
+    return <Navigate to="/appointments" replace />;
   }
 
-  navItems.push({ displayName: 'Paramètres', name: 'Settings', path: '/settings', icon: Settings });
+  let navItems = [];
+  if (user?.role === 'Nurse') {
+    navItems = [
+      { displayName: t('nav.appointments'), name: 'Appointments', path: '/appointments', icon: Calendar },
+      { displayName: t('nav.messages'), name: 'Chat', path: '/chat', icon: MessageSquare },
+    ];
+  } else {
+    navItems = [
+      { displayName: t('nav.dashboard'), name: 'Dashboard', path: '/', icon: LayoutDashboard },
+      { displayName: t('nav.appointments'), name: 'Appointments', path: '/appointments', icon: Calendar },
+      { displayName: t('nav.patients'), name: 'Patients', path: '/patients', icon: Users },
+      { displayName: t('nav.messages'), name: 'Chat', path: '/chat', icon: MessageSquare },
+      { displayName: t('nav.prescriptions'), name: 'Prescriptions', path: '/prescriptions', icon: FileText },
+    ];
+
+   if (user?.role === 'Doctor') {
+  navItems.unshift({
+    displayName: currentPatient
+      ? `${t('current_patient.current_patient_label')} ${currentPatient.fullName}`
+      : t('current_patient.no_patient_title'),
+    name: 'CurrentPatient',
+    path: '/current-patient',
+    icon: Stethoscope
+  });
+}
+
+    if (user?.role === 'Doctor' || user?.permissions?.viewFinance) {
+      navItems.push({ displayName: t('nav.finance'), name: 'Finance', path: '/finance', icon: Activity });
+    }
+
+    // Licenses navigation item removed
+
+    navItems.push({ displayName: t('nav.settings'), name: 'Settings', path: '/settings', icon: Settings }); 
+    navItems.push({ displayName: t('nav.help'), name: 'Help', path: '/help', icon: HelpCircle });    
+  }
 
   const getPageTitle = () => {
-    if (location.pathname === '/') return 'Aperçu Général';
+    if (location.pathname === '/') return t('layout.page_title.dashboard');
     const segment = location.pathname.split('/')[1];
-    if (segment === 'patients') return 'Dossiers Patients';
-    if (segment === 'prescriptions') return 'Registre des Ordonnances';
-    if (segment === 'finance') return 'Suivi Comptable';
-    if (segment === 'settings') return 'Paramètres du Portail';
+    if (segment === 'patients') return t('layout.page_title.patients');
+    if (segment === 'prescriptions') return t('layout.page_title.prescriptions');
+    if (segment === 'appointments') return t('layout.page_title.appointments');
+    if (segment === 'chat') return t('layout.page_title.chat');
+    if (segment === 'finance') return t('layout.page_title.finance');
+    if (segment === 'settings') return t('layout.page_title.settings');
+    if (segment === 'help') return t('layout.page_title.help');
+    if (segment === 'current-patient') return t('layout.page_title.current_patient');
     return segment.charAt(0).toUpperCase() + segment.slice(1);
   };
 
   const getBreadcrumbName = () => {
     const segment = location.pathname.split('/')[1];
-    if (!segment) return 'Tableau de bord';
-    if (segment === 'patients') return 'Patients';
-    if (segment === 'prescriptions') return 'Ordonnances';
-    if (segment === 'finance') return 'Comptabilité';
-    if (segment === 'settings') return 'Paramètres';
+    if (!segment) return t('layout.breadcrumb.dashboard');
+    if (segment === 'patients') return t('layout.breadcrumb.patients');
+    if (segment === 'prescriptions') return t('layout.breadcrumb.prescriptions');
+    if (segment === 'appointments') return t('layout.breadcrumb.appointments');
+    if (segment === 'chat') return t('layout.breadcrumb.chat');
+    if (segment === 'finance') return t('layout.breadcrumb.finance');
+    if (segment === 'settings') return t('layout.breadcrumb.settings');
+    if (segment === 'help') return t('layout.breadcrumb.help');
+    if (segment === 'current-patient') return t('layout.breadcrumb.current_patient');
     return segment;
   };
 
@@ -119,8 +186,11 @@ export default function MainLayout() {
           </nav>
         </div>
 
-        {/* Profile Card & Logout Footer */}
-        <div className="p-4 border-t border-slate-800/60 bg-slate-950/20">
+        <div>
+          {/* License Plan Status removed */}
+
+          {/* Profile Card & Logout Footer */}
+          <div className="p-4 border-t border-slate-800/60 bg-slate-950/20">
           <div className="flex items-center space-x-3 mb-4 p-2 bg-slate-850/50 rounded-2xl border border-slate-800/40">
             <div className="relative">
               <div className="h-10 w-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-teal-500 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-500/10">
@@ -130,7 +200,7 @@ export default function MainLayout() {
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-xs font-bold text-white truncate">{user.name}</p>
-              <p className="text-[10px] text-teal-400 font-semibold uppercase tracking-wider">{user.role === 'Doctor' ? 'Médecin' : user.role}</p>
+              <p className="text-[10px] text-teal-400 font-semibold uppercase tracking-wider">{t(`roles.${user.role.toLowerCase()}`)}</p>
             </div>
           </div>
 
@@ -139,18 +209,19 @@ export default function MainLayout() {
             className="w-full flex items-center justify-center gap-2 h-10 px-4 rounded-xl text-xs font-bold text-rose-400 hover:text-rose-300 hover:bg-rose-950/20 border border-rose-950/40 transition duration-200 active:scale-95 cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
-            Se déconnecter
+            {t('nav.logout')}
           </button>
         </div>
-      </aside>
+      </div>
+    </aside>
 
       {/* Main Content Pane */}
       <main className="flex-1 flex flex-col overflow-hidden relative">
-        {/* Ambient Top Shadow Bar */}
-        <header className="h-20 bg-white/70 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8">
+        {/* 2. Dynamically apply relative z-20 based on isModalOpen */}
+        <header className={`h-20 bg-white/70 backdrop-blur-md border-b border-slate-200 flex items-center justify-between px-8 ${isModalOpen ? 'hidden' : 'z-20'}`}>
           <div className="flex items-center space-x-4">
             <div className="flex items-center space-x-2 text-xs font-semibold text-slate-400">
-              <span>Système</span>
+              <span>{t('nav.system')}</span>
               <ChevronRight className="h-3.5 w-3.5 text-slate-300" />
               <span className="text-indigo-600 font-bold capitalize">{getBreadcrumbName()}</span>
             </div>
@@ -160,12 +231,27 @@ export default function MainLayout() {
           <div className="flex items-center space-x-6">
             <div className="hidden md:flex flex-col text-right">
               <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1 justify-end">
-                <Sparkles className="h-3 w-3 text-indigo-500" /> Portail Clinique
+                <Sparkles className="h-3 w-3 text-indigo-500" /> {t('layout.portal')}
               </span>
               <h2 className="text-sm font-bold text-slate-800">
-                {greeting}, <span className="text-indigo-600 font-extrabold">{user.name}</span>!
+                {t(greeting)}, <span className="text-indigo-600 font-extrabold">{user.name}</span>!
               </h2>
             </div>
+
+            <div className="h-10 w-px bg-slate-200" />
+
+            <NotificationsDropdown />
+
+            <div className="h-10 w-px bg-slate-200" />
+
+            <button
+              onClick={() => i18n.changeLanguage(i18n.language === 'fr' ? 'ar' : 'fr')}
+              className="flex items-center space-x-2 text-slate-600 hover:text-indigo-600 transition p-2 rounded-lg hover:bg-slate-100 cursor-pointer"
+              title="Changer de langue"
+            >
+              <Languages className="h-5 w-5" />
+              <span className="text-xs font-bold uppercase">{i18n.language}</span>
+            </button>
 
             <div className="h-10 w-px bg-slate-200" />
 
@@ -185,11 +271,12 @@ export default function MainLayout() {
             {location.pathname !== '/settings' && (
               <div className="flex flex-col mb-2">
                 <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">{getPageTitle()}</h1>
-                <p className="text-xs text-slate-500 font-medium">Gérez vos opérations cliniques et dossiers patients en toute fluidité.</p>
+                <p className="text-xs text-slate-500 font-medium">{t('layout.dashboard_desc')}</p>
               </div>
             )}
 
-            <Outlet />
+            {/* 3. Pass down the state modifier to child views */}
+            <Outlet context={[isModalOpen, setModalOpen]} />
           </div>
         </div>
       </main>

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
@@ -13,6 +14,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation(['translation', 'group1']);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,7 +22,7 @@ export default function Login() {
       await login(email, password);
       navigate('/');
     } catch (err) {
-      setError('E-mail ou mot de passe invalide');
+      setError(t('login.errInvalid'));
     }
   };
 
@@ -33,18 +35,18 @@ export default function Login() {
               <Stethoscope className="h-8 w-8 text-white" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold tracking-tight text-blue-900">Connexion MaClinic</CardTitle>
-          <CardDescription className="text-gray-500">Entrez vos identifiants pour accéder au système</CardDescription>
+          <CardTitle className="text-2xl font-bold tracking-tight text-blue-900">{t('login.title')}</CardTitle>
+          <CardDescription className="text-gray-500">{t('login.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
             {error && <div className="p-3 text-sm text-red-500 bg-red-50 rounded-md">{error}</div>}
             <div className="space-y-2">
-              <Label htmlFor="email">E-mail</Label>
+              <Label htmlFor="email">{t('login.email')}</Label>
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder={t('login.email_placeholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -52,7 +54,7 @@ export default function Login() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="password">Mot de passe</Label>
+              <Label htmlFor="password">{t('login.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -63,13 +65,13 @@ export default function Login() {
               />
             </div>
             <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-              Se Connecter
+              {t('login.btn')}
             </Button>
 
             <div className="text-center text-sm text-gray-500 mt-4">
-              Vous n'avez pas de compte?{' '}
+              {t('login.noAccount')}{' '}
               <Link to="/register" className="text-blue-600 hover:underline">
-                Inscrivez-vous ici
+                {t('login.registerLink')}
               </Link>
             </div>
           </form>

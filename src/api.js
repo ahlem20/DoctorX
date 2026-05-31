@@ -1,7 +1,12 @@
 import axios from 'axios';
 
+const isLocal = typeof window !== 'undefined' && 
+  (window.location.hostname === 'localhost' || 
+   window.location.hostname === '127.0.0.1' || 
+   window.location.hostname === '');
+
 const api = axios.create({
-  baseURL: 'https://maclinicbackend.onrender.com/api',
+  baseURL: isLocal ? 'http://localhost:5000/api' : 'https://maclinicbackend.onrender.com/api',
 });
 
 api.interceptors.request.use(
@@ -14,6 +19,23 @@ api.interceptors.request.use(
     return config;
   },
   (error) => Promise.reject(error)
+);
+
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (
+      error.response &&
+      error.response.status === 403 &&
+      error.response.data &&
+      error.response.data.status
+    ) {
+      window.dispatchEvent(
+        new CustomEvent('licenseValidationError', { detail: error.response.data })
+      );
+    }
+    return Promise.reject(error);
+  }
 );
 
 export default api;

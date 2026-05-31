@@ -3,9 +3,11 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { X, UserPlus, Sparkles } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../api';
 
 export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
+  const { t } = useTranslation('group2');
   const [formData, setFormData] = useState({
     fullName: '',
     age: '',
@@ -40,7 +42,7 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
       });
     } catch (error) {
       console.error(error);
-      alert('Échec de l\'ajout du patient');
+      alert(t('addPatientModal.errorAddPatient'));
     } finally {
       setLoading(false);
     }
@@ -50,32 +52,16 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 overflow-y-auto animate-in fade-in-40 duration-300">
       <div className="bg-white/90 backdrop-blur-lg border border-slate-200/60 rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 slide-in-from-bottom-4 duration-300">
 
-        {/* Modal Header */}
-        <div className="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50/50">
-          <div className="flex items-center gap-2">
-            <div className="p-2 bg-indigo-50 rounded-lg border border-indigo-100 text-indigo-600">
-              <UserPlus className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-md font-extrabold text-slate-800 tracking-tight">Enregistrer Nouveau Patient</h2>
-              <p className="text-[10px] text-slate-400 font-semibold tracking-wider uppercase">Fichier de Dossier Clinique</p>
-            </div>
-          </div>
-          <button onClick={onClose} className="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition cursor-pointer">
-            <X className="h-4.5 w-4.5" />
-          </button>
-        </div>
-
         {/* Modal Body */}
         <div className="p-6 overflow-y-auto flex-1 space-y-4">
           <form id="add-patient-form" onSubmit={handleSubmit} className="space-y-4">
 
             <div className="space-y-1.5">
-              <Label htmlFor="fullName" className="text-xs font-bold text-slate-500">Nom Complet</Label>
+              <Label htmlFor="fullName" className="text-xs font-bold text-slate-500">{t('addPatientModal.fullName')}</Label>
               <Input
                 id="fullName"
                 name="fullName"
-                placeholder="Dr. Jean Dupont"
+                placeholder={t('addPatientModal.fullNamePlaceholder')}
                 required
                 value={formData.fullName}
                 onChange={handleChange}
@@ -85,7 +71,7 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1.5">
-                <Label htmlFor="age" className="text-xs font-bold text-slate-500">Age</Label>
+                <Label htmlFor="age" className="text-xs font-bold text-slate-500">{t('addPatientModal.age')}</Label>
                 <Input
                   id="age"
                   name="age"
@@ -98,7 +84,7 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
                 />
               </div>
               <div className="space-y-1.5">
-                <Label htmlFor="gender" className="text-xs font-bold text-slate-500">Sexe</Label>
+                <Label htmlFor="gender" className="text-xs font-bold text-slate-500">{t('addPatientModal.gender')}</Label>
                 <select
                   id="gender"
                   name="gender"
@@ -106,18 +92,18 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
                   onChange={handleChange}
                   className="flex h-10 w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus-visible:outline-none transition"
                 >
-                  <option value="Male">Homme</option>
-                  <option value="Female">Femme</option>
+                  <option value="Male">{t('addPatientModal.male')}</option>
+                  <option value="Female">{t('addPatientModal.female')}</option>
                 </select>
               </div>
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="phoneNumber" className="text-xs font-bold text-slate-500">Numéro de Téléphone</Label>
+              <Label htmlFor="phoneNumber" className="text-xs font-bold text-slate-500">{t('addPatientModal.phone')}</Label>
               <Input
                 id="phoneNumber"
                 name="phoneNumber"
-                placeholder="+213 XX XX XX XX"
+                placeholder={t('addPatientModal.phonePlaceholder')}
                 value={formData.phoneNumber}
                 onChange={handleChange}
                 className="h-10 bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl"
@@ -125,11 +111,11 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="address" className="text-xs font-bold text-slate-500">Adresse</Label>
+              <Label htmlFor="address" className="text-xs font-bold text-slate-500">{t('addPatientModal.address')}</Label>
               <Input
                 id="address"
                 name="address"
-                placeholder="Alger, Algérie"
+                placeholder={t('addPatientModal.addressPlaceholder')}
                 value={formData.address}
                 onChange={handleChange}
                 className="h-10 bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl"
@@ -138,13 +124,13 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
 
             <div className="space-y-1.5">
               <Label htmlFor="allergies" className="text-xs font-bold text-slate-500 flex items-center gap-1">
-                <span>Allergies</span>
-                <span className="text-[10px] text-slate-400 font-semibold italic">(séparées par des virgules)</span>
+                <span>{t('addPatientModal.allergies')}</span>
+                <span className="text-[10px] text-slate-400 font-semibold italic">{t('addPatientModal.allergiesHint')}</span>
               </Label>
               <Input
                 id="allergies"
                 name="allergies"
-                placeholder="Penicillin, Pollen"
+                placeholder={t('addPatientModal.allergiesPlaceholder')}
                 value={formData.allergies}
                 onChange={handleChange}
                 className="h-10 bg-white border-slate-200 focus:border-indigo-500 focus:ring-indigo-500/20 rounded-xl"
@@ -152,12 +138,12 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="medicalHistory" className="text-xs font-bold text-slate-500">Antécédents Médicaux</Label>
+              <Label htmlFor="medicalHistory" className="text-xs font-bold text-slate-500">{t('addPatientModal.medicalHistory')}</Label>
               <textarea
                 id="medicalHistory"
                 name="medicalHistory"
                 rows="3"
-                placeholder="Maladies chroniques, antécédents chirurgicaux ou observations cliniques..."
+                placeholder={t('addPatientModal.medicalHistoryPlaceholder')}
                 value={formData.medicalHistory}
                 onChange={handleChange}
                 className="flex w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 focus-visible:outline-none transition"
@@ -173,7 +159,7 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
             type="button"
             className="h-10 px-4 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 hover:bg-slate-100 transition cursor-pointer active:scale-95"
           >
-            Annuler
+            {t('addPatientModal.cancel')}
           </button>
 
           <button
@@ -185,11 +171,11 @@ export default function AddPatientModal({ isOpen, onClose, onSuccess }) {
             {loading ? (
               <span className="flex items-center gap-1.5">
                 <span className="h-3.5 w-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Enregistrement...
+                {t('addPatientModal.saving')}
               </span>
             ) : (
               <span className="flex items-center gap-1.5">
-                <Sparkles className="h-3.5 w-3.5" /> Sauvegarder
+                <Sparkles className="h-3.5 w-3.5" /> {t('addPatientModal.save')}
               </span>
             )}
           </button>
