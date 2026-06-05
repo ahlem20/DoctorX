@@ -5,11 +5,11 @@ import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card';
-import { Stethoscope } from 'lucide-react';
+import { Stethoscope, Languages } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 export default function Register() {
-  const { t } = useTranslation('group2');
+  const { t, i18n } = useTranslation('group2');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -17,6 +17,10 @@ export default function Register() {
   const [error, setError] = useState('');
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  const toggleLanguage = () => {
+    i18n.changeLanguage(i18n.language === 'fr' ? 'ar' : 'fr');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,7 +33,18 @@ export default function Register() {
   };
 
   return (
-    <div className="flex min-h-screen w-full items-center justify-center bg-blue-50/50 py-12">
+    <div className="flex min-h-screen w-full items-center justify-center bg-blue-50/50 py-12 relative">
+      <div className="absolute top-4 right-4 rtl:left-4 rtl:right-auto">
+        <button
+          type="button"
+          onClick={toggleLanguage}
+          className="flex items-center space-x-2 rtl:space-x-reverse text-slate-600 hover:text-emerald-600 transition p-2 rounded-lg hover:bg-emerald-100 cursor-pointer bg-white shadow-sm border border-slate-200"
+          title="Changer de langue"
+        >
+          <Languages className="h-5 w-5" />
+          <span className="text-xs font-bold uppercase">{i18n.language}</span>
+        </button>
+      </div>
       <Card className="w-full max-w-md shadow-xl border-blue-100">
         <CardHeader className="space-y-2 text-center">
           <div className="flex justify-center mb-4">
@@ -47,7 +62,7 @@ export default function Register() {
               <Label htmlFor="name">{t('register.fullName')}</Label>
               <Input
                 id="name"
-                placeholder="Dr. John Doe"
+                placeholder={t('register.fullNamePlaceholder')}
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -59,7 +74,7 @@ export default function Register() {
               <Input
                 id="email"
                 type="email"
-                placeholder="m@example.com"
+                placeholder={t('register.emailPlaceholder')}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

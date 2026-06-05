@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X, HeartPulse, Thermometer, Droplets, Activity, Weight,
   FlaskConical, Radio, Plus, Trash2, ChevronRight, ChevronLeft,
@@ -16,12 +17,13 @@ const STEPS = [
 ];
 
 export default function NewConsultationModal({ isOpen, onClose, patient, onSuccess }) {
-  const { t } = useTranslation('group1');
+  const { t, i18n } = useTranslation('group1');
   const [step, setStep] = useState(1);
   const [saving, setSaving] = useState(false);
   const [catalogAnalyses, setCatalogAnalyses] = useState([]);
   const [catalogRadios, setCatalogRadios] = useState([]);
   const [duration, setDuration] = useState(0);
+  const [pastConsultations, setPastConsultations] = useState([]);
 
   // Step 1 — Vitals
   const [vitals, setVitals] = useState({
@@ -52,9 +54,10 @@ export default function NewConsultationModal({ isOpen, onClose, patient, onSucce
 
   // Fetch catalogs
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !patient) return;
     api.get('/catalog/analyses').then(r => setCatalogAnalyses(r.data)).catch(() => {});
     api.get('/catalog/radios').then(r => setCatalogRadios(r.data)).catch(() => {});
+    api.get(`/consultation/${patient._id}/consultations`).then(r => setPastConsultations(r.data)).catch(() => {});
     setStep(1);
     setVitals({ heartRate: '', bpSystolic: '', bpDiastolic: '', temperature: '', spo2: '', bloodSugar: '', weight: '', height: '' });
     setConsultation({ complaint: '', symptoms: '', diagnosis: '', subjective: '', objective: '', assessment: '', plan: '' });
@@ -89,7 +92,7 @@ export default function NewConsultationModal({ isOpen, onClose, patient, onSucce
   const handleSave = async () => {
     setSaving(true);
     try {
-      await api.post(`/patients/${patient._id}/consultations`, {
+      await api.post(`/consultation/${patient._id}/consultations`, {
         vitals: { ...vitals, bmi },
         consultation,
         analyses: selectedAnalyses,
@@ -105,11 +108,23 @@ export default function NewConsultationModal({ isOpen, onClose, patient, onSucce
     }
   };
 
+  const handleDeleteConsultation = async (consultationId) => {
+    if (window.confirm(t('newCons.confirmDelete'))) {
+      try {
+        await api.delete(`/consultation/${consultationId}`);
+        setPastConsultations(prev => prev.filter(c => c._id !== consultationId));
+      } catch (error) {
+        console.error("Erreur lors de la suppression", error);
+        alert(t('newCons.errorDelete'));
+      }
+    }
+  };
+
   if (!isOpen || !patient) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[95vh] overflow-hidden">
+  return createPortal(
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+      <div className="bg-white rounded-3xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[95vh] overflow-hidden">
 
         {/* Header */}
         <div className="flex items-center justify-between px-7 py-5 bg-gradient-to-r from-slate-900 to-indigo-950 rounded-t-3xl">
@@ -133,33 +148,37 @@ export default function NewConsultationModal({ isOpen, onClose, patient, onSucce
           </div>
         </div>
 
-        {/* Step Indicator */}
-        <div className="flex items-center px-7 py-4 bg-slate-50 border-b border-slate-100">
-          {STEPS.map((s, i) => (
-            <div key={s.id} className="flex items-center flex-1">
-              <button
-                onClick={() => setStep(s.id)}
-                className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
-                  step === s.id
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
-                    : step > s.id
-                    ? 'text-teal-600 bg-teal-50 border border-teal-100'
-                    : 'text-slate-400 hover:text-slate-600'
-                }`}
-              >
-                <s.icon className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">{t(s.label)}</span>
-                <span className="sm:hidden">{s.id}</span>
-              </button>
-              {i < STEPS.length - 1 && <ChevronRight className="h-3.5 w-3.5 text-slate-300 mx-1 flex-1" />}
+        {/* Main Content Area */}
+        <div className="flex flex-1 overflow-hidden">
+          {/* Left: Form Area */}
+          <div className="flex-1 flex flex-col overflow-hidden">
+            {/* Step Indicator */}
+            <div className="flex items-center px-7 py-4 bg-slate-50 border-b border-slate-100 shrink-0">
+              {STEPS.map((s, i) => (
+                <div key={s.id} className="flex items-center flex-1">
+                  <button
+                    onClick={() => setStep(s.id)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-xl text-xs font-bold transition-all duration-200 ${
+                      step === s.id
+                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-200'
+                        : step > s.id
+                        ? 'text-teal-600 bg-teal-50 border border-teal-100'
+                        : 'text-slate-400 hover:text-slate-600'
+                    }`}
+                  >
+                    <s.icon className="h-3.5 w-3.5" />
+                    <span className="hidden sm:inline">{t(s.label)}</span>
+                    <span className="sm:hidden">{s.id}</span>
+                  </button>
+                  {i < STEPS.length - 1 && (i18n.language === 'ar' ? <ChevronLeft className="h-3.5 w-3.5 text-slate-300 mx-1 flex-1" /> : <ChevronRight className="h-3.5 w-3.5 text-slate-300 mx-1 flex-1" />)}
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-7">
+            {/* Body */}
+            <div className="flex-1 overflow-y-auto p-7">
 
-          {/* STEP 1 — Vitals */}
+              {/* STEP 1 — Vitals */}
           {step === 1 && (
             <div className="space-y-6">
               <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">{t('newCons.step.vitals')}</p>
@@ -337,14 +356,14 @@ export default function NewConsultationModal({ isOpen, onClose, patient, onSucce
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider flex items-center gap-1"><HeartPulse className="h-3.5 w-3.5 text-rose-500" /> {t('newCons.step.vitals')}</p>
                 <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
                   {[
-                    { label: 'FC', value: vitals.heartRate, unit: 'bpm' },
-                    { label: 'TA', value: vitals.bpSystolic && vitals.bpDiastolic ? `${vitals.bpSystolic}/${vitals.bpDiastolic}` : '', unit: 'mmHg' },
-                    { label: 'Temp', value: vitals.temperature, unit: '°C' },
-                    { label: 'SpO2', value: vitals.spo2, unit: '%' },
-                    { label: 'Glycémie', value: vitals.bloodSugar, unit: 'g/L' },
-                    { label: 'Poids', value: vitals.weight, unit: 'kg' },
-                    { label: 'Taille', value: vitals.height, unit: 'cm' },
-                    { label: 'IMC', value: bmi, unit: '' },
+                    { label: t('newCons.vit.hrAbbr'), value: vitals.heartRate, unit: 'bpm' },
+                    { label: t('newCons.vit.bpAbbr'), value: vitals.bpSystolic && vitals.bpDiastolic ? `${vitals.bpSystolic}/${vitals.bpDiastolic}` : '', unit: 'mmHg' },
+                    { label: t('newCons.vit.tempAbbr'), value: vitals.temperature, unit: '°C' },
+                    { label: t('newCons.vit.spo2Abbr'), value: vitals.spo2, unit: '%' },
+                    { label: t('newCons.vit.bgAbbr'), value: vitals.bloodSugar, unit: 'g/L' },
+                    { label: t('newCons.vit.weightAbbr'), value: vitals.weight, unit: 'kg' },
+                    { label: t('newCons.vit.heightAbbr'), value: vitals.height, unit: 'cm' },
+                    { label: t('newCons.vit.bmiAbbr'), value: bmi, unit: '' },
                   ].filter(v => v.value).map((v, i) => (
                     <div key={i} className="bg-white rounded-xl border border-slate-100 p-2 text-center">
                       <p className="text-[9px] font-bold text-slate-400 uppercase">{v.label}</p>
@@ -400,23 +419,88 @@ export default function NewConsultationModal({ isOpen, onClose, patient, onSucce
             </div>
           )}
         </div>
-
+            
         {/* Footer */}
-        <div className="px-7 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center rounded-b-3xl">
-          <Button variant="outline" onClick={() => step > 1 ? setStep(s => s - 1) : onClose()} className="gap-2 text-xs font-bold">
-            <ChevronLeft className="h-4 w-4" /> {step === 1 ? t('newCons.btn.cancel') : t('newCons.btn.prev')}
-          </Button>
-          {step < 4
-            ? <Button onClick={() => setStep(s => s + 1)} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-xs font-bold">
-                {t('newCons.btn.next')} <ChevronRight className="h-4 w-4" />
+        <div className="px-7 py-4 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
+              <Button variant="outline" onClick={() => step > 1 ? setStep(s => s - 1) : onClose()} className="gap-2 text-xs font-bold rounded-xl">
+                {i18n.language === 'ar' ? <ChevronRight className="h-4 w-4" /> : <ChevronLeft className="h-4 w-4" />} {step === 1 ? t('newCons.btn.cancel') : t('newCons.btn.prev')}
               </Button>
-            : <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white gap-2 text-xs font-bold">
-                {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-                {saving ? t('newCons.btn.saving') : t('newCons.btn.closeCons')}
-              </Button>
-          }
+              {step < 4
+                ? <Button onClick={() => setStep(s => s + 1)} className="bg-indigo-600 hover:bg-indigo-700 text-white gap-2 text-xs font-bold rounded-xl shadow-sm">
+                    {t('newCons.btn.next')} {i18n.language === 'ar' ? <ChevronLeft className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                  </Button>
+                : <Button onClick={handleSave} disabled={saving} className="bg-teal-600 hover:bg-teal-700 text-white gap-2 text-xs font-bold rounded-xl shadow-sm">
+                    {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                    {saving ? t('newCons.btn.saving') : t('newCons.btn.closeCons')}
+                  </Button>
+              }
+            </div>
+          </div>
+
+          {/* Right: History Sidebar */}
+          <div className="hidden md:flex w-80 lg:w-96 ltr:border-l rtl:border-r border-slate-100 bg-slate-50/50 flex-col overflow-hidden">
+            <div className="p-4 border-b border-slate-100 bg-white shrink-0 flex items-center justify-between">
+              <h3 className="text-[11px] font-bold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                <FileText className="h-4 w-4 text-slate-400" /> {t('newCons.pastSummaries')}
+              </h3>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">{pastConsultations.length}</span>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-4">
+              {pastConsultations.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-400 space-y-2">
+                  <Stethoscope className="h-8 w-8 text-slate-200" />
+                  <p className="text-xs italic text-center">{t('newCons.noPastConsultations')}</p>
+                </div>
+              ) : (
+                [...pastConsultations]
+                  .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt))
+                  .map(c => (
+                    <div key={c._id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:border-indigo-200 transition-colors space-y-3">
+                      <div className="flex justify-between items-center border-b border-slate-50 pb-2">
+                        <span className="text-[10px] font-extrabold text-slate-600 bg-slate-100 px-2.5 py-1 rounded-md">
+                          {new Date(c.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: '2-digit', month: 'short', year: 'numeric' })}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] font-bold text-teal-600 bg-teal-50 px-2 py-0.5 rounded-md flex items-center gap-1">
+                            <Clock className="h-3 w-3" /> {formatDuration(c.duration)}
+                          </span>
+                          <button 
+                            onClick={() => handleDeleteConsultation(c._id)}
+                            className="p-1 hover:bg-rose-100 rounded-md text-slate-300 hover:text-rose-500 transition-colors"
+                            title={t('newCons.deleteTooltip')}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                      {c.diagnosis && (
+                        <div>
+                          <span className="text-[9px] font-bold text-indigo-400 uppercase tracking-wider">{t('newCons.mainDiagnosis')}</span>
+                          <p className="text-xs font-bold text-slate-700 leading-snug">{c.diagnosis}</p>
+                        </div>
+                      )}
+                      {c.complaint && (
+                        <div>
+                          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{t('newCons.complaint')}</span>
+                          <p className="text-xs text-slate-600 leading-snug">{c.complaint}</p>
+                        </div>
+                      )}
+                      {(c.subjective || c.objective || c.assessment || c.plan) && (
+                        <div className="text-[10px] space-y-1.5 mt-2 p-2.5 bg-slate-50/80 rounded-xl border border-slate-100">
+                          {c.subjective && <p><span className="font-extrabold text-indigo-500 w-4 inline-block">S:</span> <span className="text-slate-600">{c.subjective}</span></p>}
+                          {c.objective && <p><span className="font-extrabold text-teal-500 w-4 inline-block">O:</span> <span className="text-slate-600">{c.objective}</span></p>}
+                          {c.assessment && <p><span className="font-extrabold text-amber-500 w-4 inline-block">A:</span> <span className="text-slate-600">{c.assessment}</span></p>}
+                          {c.plan && <p><span className="font-extrabold text-rose-500 w-4 inline-block">P:</span> <span className="text-slate-600">{c.plan}</span></p>}
+                        </div>
+                      )}
+                    </div>
+                  ))
+              )}
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

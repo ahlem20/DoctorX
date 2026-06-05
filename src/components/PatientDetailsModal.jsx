@@ -320,22 +320,6 @@ export default function PatientDetailsModal({ isOpen, onClose, patient }) {
                 🔬 {t('patientDetails.startExam')}
               </Button>
             )}
-
-            <Button
-              className="bg-teal-600 hover:bg-teal-700 text-white font-bold mr-2"
-              onClick={() => setIsConsultationModalOpen(true)}
-            >
-              <Stethoscope className="h-4 w-4 mr-2" />
-              {t('patientDetails.newConsultation')}
-            </Button>
-
-            <Button
-              className="bg-blue-600 hover:bg-blue-700 text-white font-bold"
-              onClick={() => setIsAddModalOpen(true)}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              {t('patientDetails.newPrescription')}
-            </Button>
           </div>
         </div>
       </div>

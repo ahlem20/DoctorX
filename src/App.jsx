@@ -9,7 +9,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import PatientsList from './pages/PatientsList';
 import PatientDetails from './pages/PatientDetails';
-import Prescriptions from './pages/Prescriptions';
+import CatalogManager from './pages/CatalogManager';
 import Finance from './pages/Finance';
 import Settings from './pages/Settings';
 import PrintPrescription from './pages/PrintPrescription';
@@ -40,7 +40,7 @@ function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/patients" element={<PatientsList />} />
                 <Route path="/patients/:id" element={<PatientDetails />} />
-                <Route path="/prescriptions" element={<Prescriptions />} />
+                <Route path="/prescriptions" element={<CatalogManager />} />
                 <Route path="/appointments" element={<Appointments />} />
                 <Route path="/chat" element={<Chat />} />
                 <Route path="/finance" element={<Finance />} />

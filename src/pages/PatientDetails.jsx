@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Card, CardHeader, CardTitle, CardContent } from '../components/ui/card';
 import { Button } from '../components/ui/button';
-import { ArrowLeft, User, Phone, MapPin, AlertCircle, FileText, Calendar, MessageSquare, Plus, Clock, Printer, Stethoscope } from 'lucide-react';
+import { ArrowLeft, User, Phone, MapPin, AlertCircle, FileText, Calendar, MessageSquare, Plus, Clock, Printer, Stethoscope, FlaskConical } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import api from '../api';
 import { useTranslation } from 'react-i18next';
@@ -349,7 +349,7 @@ export default function PatientDetails() {
             <CardHeader className="bg-slate-50/50 border-b border-slate-100/80 py-4 px-6 flex flex-row items-center justify-between">
               <div>
                 <CardTitle className="text-md font-bold text-slate-800 flex items-center gap-2">
-                  <FileText className="h-4.5 w-4.5 text-indigo-500" />
+                  <FlaskConical className="h-4.5 w-4.5 text-indigo-500" />
                   {t('patDet.presc.ledger')}
                 </CardTitle>
                 <p className="text-xs text-slate-400 mt-0.5 font-medium">{t('patDet.presc.hist')}</p>
@@ -382,24 +382,47 @@ export default function PatientDetails() {
                           </a>
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        {script.medicines.map((med, idx) => (
-                          <div key={idx} className="flex justify-between text-xs bg-slate-50/50 p-2 rounded-lg">
-                            <span className="font-semibold text-slate-750">{med.name}</span>
-                            <span className="text-slate-400">{med.dosage}{t('patDet.presc.for')}{med.duration}</span>
+                      <div className="space-y-2.5">
+                        {/* Biological Analyses */}
+                        {script.analyses && script.analyses.length > 0 && (
+                          <div className="space-y-1">
+                            <span className="text-[9px] font-bold text-purple-500 uppercase tracking-wider block">Analyses Biologiques</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {script.analyses.map((ana, idx) => (
+                                <span key={idx} className="px-2.5 py-1 bg-purple-50/70 text-purple-700 text-[10px] rounded-lg border border-purple-100 font-extrabold shadow-xs">
+                                  {ana.name}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        ))}
+                        )}
+                        {/* Radiology */}
+                        {script.radios && script.radios.length > 0 && (
+                          <div className="space-y-1 mt-2">
+                            <span className="text-[9px] font-bold text-indigo-500 uppercase tracking-wider block">Examens Radiologiques</span>
+                            <div className="space-y-1">
+                              {script.radios.map((rad, idx) => (
+                                <div key={idx} className="flex flex-col bg-slate-50/50 p-2 rounded-lg border border-slate-100 text-xs">
+                                  <span className="font-extrabold text-slate-700">{rad.name}</span>
+                                  {rad.notes && <span className="text-[10px] text-slate-400 italic font-semibold mt-0.5">Note: {rad.notes}</span>}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                      {script.notes && (
-                        <p className="mt-2 text-xs text-slate-500 italic bg-yellow-50/60 p-2 rounded-lg">
-                          "{script.notes}"
-                        </p>
-                      )}
+                      <div className="space-y-4">
+                        {script.notes && (
+                          <p className="mt-2 text-xs text-slate-500 italic bg-yellow-50/40 border border-yellow-100 p-2.5 rounded-xl">
+                            <span className="font-medium">Notes:</span> {script.notes}
+                          </p>
+                        )}
+                      </div>
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-6 text-slate-400 border-2 border-dashed border-slate-150 rounded-xl">
-                    <FileText className="h-6 w-6 text-slate-200 mx-auto mb-1" />
+                    <FlaskConical className="h-6 w-6 text-slate-200 mx-auto mb-1 animate-pulse" />
                     <p className="font-semibold text-xs">{t('patDet.presc.empty')}</p>
                   </div>
                 )}

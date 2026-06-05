@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react';
 import { Card, CardContent } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Input } from '../components/ui/input';
-import { Button } from '../components/ui/button';
-import { Search, Plus, Printer, FileText, Calendar, User, UserCheck, Trash2 } from 'lucide-react';
+import { Search, Plus, Printer, FileText, Calendar, User, UserCheck, Trash2, FlaskConical, Radio as RadioIcon } from 'lucide-react';
 import api from '../api';
 import AddPrescriptionModal from '../components/AddPrescriptionModal';
 import AddPatientModal from '../components/AddPatientModal';
@@ -101,7 +100,7 @@ export default function Prescriptions() {
                   <TableRow>
                     <TableCell colSpan={6} className="h-32 text-center text-slate-400 animate-pulse">
                       <div className="flex flex-col items-center justify-center gap-2">
-                        <FileText className="h-6 w-6 text-indigo-500 animate-spin" />
+                        <FlaskConical className="h-6 w-6 text-indigo-500 animate-spin" />
                         <span className="font-semibold text-xs">{t('prescriptions.loading')}</span>
                       </div>
                     </TableCell>
@@ -139,11 +138,25 @@ export default function Prescriptions() {
                         </div>
                       </TableCell>
 
+                      {/* Display biological analyses & radiology exam badges */}
                       <TableCell className="py-4 px-6 text-slate-600">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-bold bg-indigo-50/60 text-indigo-700 px-2.5 py-1 rounded-lg border border-indigo-100/50 shadow-sm shadow-indigo-100/10">
-                          <FileText className="h-3.5 w-3.5 text-indigo-500" />
-                          {t('prescriptions.items', { count: script.medicines?.length || 0 })}
-                        </span>
+                        <div className="flex flex-col gap-1.5">
+                          {script.analyses && script.analyses.length > 0 && (
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold bg-purple-50 text-purple-700 px-2.5 py-0.5 rounded-lg border border-purple-150 w-fit">
+                              <FlaskConical className="h-3.5 w-3.5 text-purple-500" />
+                              {script.analyses.length} {script.analyses.length > 1 ? 'Analyses' : 'Analyse'}
+                            </span>
+                          )}
+                          {script.radios && script.radios.length > 0 && (
+                            <span className="inline-flex items-center gap-1.5 text-[10px] font-extrabold bg-indigo-50 text-indigo-700 px-2.5 py-0.5 rounded-lg border border-indigo-150 w-fit">
+                              <RadioIcon className="h-3.5 w-3.5 text-indigo-500" />
+                              {script.radios.length} {script.radios.length > 1 ? 'Radiologies' : 'Radiologie'}
+                            </span>
+                          )}
+                          {(!script.analyses || script.analyses.length === 0) && (!script.radios || script.radios.length === 0) && (
+                            <span className="text-xs text-slate-400 italic">Aucun examen prescrit</span>
+                          )}
+                        </div>
                       </TableCell>
 
                       <TableCell className="py-4 px-6 text-right">
@@ -177,7 +190,7 @@ export default function Prescriptions() {
                   <TableRow>
                     <TableCell colSpan={6} className="h-32 text-center text-slate-400">
                       <div className="flex flex-col items-center justify-center space-y-2">
-                        <FileText className="h-8 w-8 text-slate-200 animate-pulse" />
+                        <FlaskConical className="h-8 w-8 text-slate-200 animate-pulse" />
                         <p className="font-semibold text-slate-500">{t('prescriptions.noPrescriptions')}</p>
                         <p className="text-xs text-slate-400">{t('prescriptions.addPrescriptionHint')}</p>
                       </div>

@@ -44,10 +44,39 @@ export default function Chat() {
     return () => clearInterval(interval);
   }, [activeTab]);
 
-  // Scroll to bottom when messages list changes
+  // Request notification permission on load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission !== 'granted' && Notification.permission !== 'denied') {
+      Notification.requestPermission();
+    }
+  }, []);
+
+  const prevMessagesLength = useRef(0);
+
+  // Scroll to bottom and handle notifications when messages list changes
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
+
+    if (messages.length > prevMessagesLength.current && prevMessagesLength.current !== 0) {
+      const newMsgs = messages.slice(prevMessagesLength.current);
+      
+      // Play sound for new messages
+      const audio = new Audio('https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3');
+      audio.volume = 0.5;
+      audio.play().catch(e => console.log('Audio play failed:', e));
+
+      // Show notification for incoming messages
+      const incomingMsgs = newMsgs.filter(m => m.sender?._id !== currentUser._id);
+      if (incomingMsgs.length > 0 && 'Notification' in window && Notification.permission === 'granted') {
+        const latestMsg = incomingMsgs[incomingMsgs.length - 1];
+        new Notification(`New message from ${latestMsg.sender?.name || 'Clinic'}`, {
+          body: latestMsg.text,
+          icon: '/logo.png'
+        });
+      }
+    }
+    prevMessagesLength.current = messages.length;
+  }, [messages, currentUser._id]);
 
   const handleSendMessage = async (e) => {
     e.preventDefault();

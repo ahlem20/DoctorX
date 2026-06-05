@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../api';
-import { Stethoscope, Printer, ArrowLeft } from 'lucide-react';
+import { Stethoscope, Printer, ArrowLeft, FlaskConical, Radio as RadioIcon, Pill } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { useTranslation } from 'react-i18next';
 
@@ -31,103 +31,177 @@ export default function PrintPrescription() {
   };
 
   if (loading) {
-    return <div className="flex h-screen items-center justify-center">{t('printPrescription.loading')}</div>;
+    return <div className="flex h-screen items-center justify-center font-bold text-slate-500">Chargement de la prescription d'examens...</div>;
   }
 
   if (!prescription) {
-    return <div className="flex h-screen items-center justify-center text-red-500">{t('printPrescription.notFound')}</div>;
+    return <div className="flex h-screen items-center justify-center text-rose-500 font-bold">Ordonnance d'examens introuvable.</div>;
   }
+
+  const hasAnalyses = prescription.analyses && prescription.analyses.length > 0;
+  const hasRadios = prescription.radios && prescription.radios.length > 0;
+  const hasMedicines = prescription.medicines && prescription.medicines.length > 0;
+
+  const isOnlyMedicines = hasMedicines && !hasAnalyses && !hasRadios;
+  const docTitle = isOnlyMedicines 
+    ? "Ordonnance Médicale" 
+    : (hasMedicines ? "Ordonnance Médicale & Examens" : "Demande d'examens complémentaires");
 
   return (
     <div className="min-h-screen bg-gray-100 p-8 print:p-0 print:bg-white" dir={i18n.language === 'ar' ? 'rtl' : 'ltr'}>
       {/* Controls - Hidden during print */}
       <div className="max-w-3xl mx-auto mb-6 flex justify-between items-center print:hidden">
-        <Button variant="outline" onClick={() => navigate(-1)} className="bg-white">
-          <ArrowLeft className="h-4 w-4 mr-2" /> {t('printPrescription.back')}
+        <Button variant="outline" onClick={() => navigate(-1)} className="bg-white rounded-xl font-bold">
+          <ArrowLeft className="h-4 w-4 mr-2" /> Retour
         </Button>
-        <Button onClick={handlePrint} className="bg-blue-600 hover:bg-blue-700 text-white">
-          <Printer className="h-4 w-4 mr-2" /> {t('printPrescription.printPdf')}
+        <Button onClick={handlePrint} className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold">
+          <Printer className="h-4 w-4 mr-2" /> Imprimer / Enregistrer en PDF
         </Button>
       </div>
 
       {/* A4 Paper Container */}
-      <div className="max-w-3xl mx-auto bg-white p-12 shadow-lg min-h-[1056px] print:shadow-none print:p-0">
-        {/* Header */}
-        <header className="flex justify-between items-start border-b-2 border-blue-600 pb-8 mb-8">
-          <div className="flex items-center gap-3">
-            <div className="bg-blue-600 p-3 rounded-xl print:bg-white print:text-blue-600 print:border print:border-blue-600">
-              <Stethoscope className="h-8 w-8 text-white print:text-blue-600" />
-            </div>
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 tracking-tight">MaClinic</h1>
-              <p className="text-gray-500 text-sm mt-1">{t('printPrescription.slogan')}</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <h2 className="text-xl font-bold text-gray-800">{prescription.doctor.name}</h2>
-            <p className="text-gray-500 text-sm">{t('printPrescription.consultantDoctor')}</p>
-            <p className="text-gray-500 text-sm mt-2">{prescription.doctor.address || t('printPrescription.defaultAddress')}</p>
-            <p className="text-gray-500 text-sm">{t('printPrescription.tel', { phone: prescription.doctor.phone || t('printPrescription.defaultPhone') })}</p>
-          </div>
-        </header>
-
-        {/* Patient Info */}
-        <section className="bg-gray-50 rounded-xl p-6 mb-8 print:bg-white print:border print:border-gray-200">
-          <div className="grid grid-cols-2 gap-y-4">
-            <div>
-              <span className="text-gray-500 text-sm uppercase tracking-wider font-semibold">{t('printPrescription.patientName')}</span>
-              <p className="text-lg font-bold text-gray-900 mt-1">{prescription.patient.fullName}</p>
-            </div>
-            <div>
-              <span className="text-gray-500 text-sm uppercase tracking-wider font-semibold">{t('printPrescription.date')}</span>
-              <p className="text-lg font-bold text-gray-900 mt-1">
-                {new Date(prescription.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
-              </p>
-            </div>
-            <div>
-              <span className="text-gray-500 text-sm uppercase tracking-wider font-semibold">{t('printPrescription.ageGender')}</span>
-              <p className="text-gray-900 font-medium mt-1">{prescription.patient.age} {t('printPrescription.yearsOld')} / {prescription.patient.gender === 'Male' ? t('addPatientModal.male') : t('addPatientModal.female')}</p>
-            </div>
-            {prescription.patient.phoneNumber && (
+      <div className="max-w-3xl mx-auto bg-white p-12 shadow-lg min-h-[1056px] print:shadow-none print:p-0 flex flex-col justify-between">
+        <div>
+          {/* Header */}
+          <header className="flex justify-between items-start border-b-2 border-indigo-600 pb-8 mb-8">
+            <div className="flex items-center gap-3">
+              <div className="bg-indigo-600 p-3 rounded-xl print:bg-white print:text-indigo-600 print:border print:border-indigo-600 text-white">
+                <FlaskConical className="h-8 w-8" />
+              </div>
               <div>
-                <span className="text-gray-500 text-sm uppercase tracking-wider font-semibold">{t('printPrescription.phone')}</span>
-                <p className="text-gray-900 font-medium mt-1">{prescription.patient.phoneNumber}</p>
+                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">MaClinic</h1>
+                <p className="text-gray-500 text-xs font-semibold mt-1 uppercase tracking-wider">{docTitle}</p>
+              </div>
+            </div>
+            <div className="text-right">
+              <h2 className="text-xl font-bold text-gray-800">Dr. {prescription.doctor.name}</h2>
+              <p className="text-gray-500 text-xs font-bold uppercase text-indigo-600">Médecin Praticien</p>
+              <p className="text-gray-500 text-xs mt-2">{prescription.doctor.address || "Medical District Center, Alger"}</p>
+              <p className="text-gray-500 text-xs">Tél: {prescription.doctor.phone || "+213 555 123 456"}</p>
+            </div>
+          </header>
+
+          {/* Patient Info */}
+          <section className="bg-slate-50 rounded-2xl p-6 mb-8 print:bg-white print:border print:border-slate-200">
+            <div className="grid grid-cols-2 gap-y-4 text-xs">
+              <div>
+                <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">Nom Complet du Patient</span>
+                <p className="text-base font-extrabold text-slate-800 mt-1">{prescription.patient.fullName}</p>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">Date de Prescription</span>
+                <p className="text-base font-extrabold text-slate-800 mt-1">
+                  {new Date(prescription.createdAt).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })}
+                </p>
+              </div>
+              <div>
+                <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">Âge / Sexe</span>
+                <p className="font-bold text-slate-700 mt-1">{prescription.patient.age} ans / {prescription.patient.gender === 'Male' ? 'Homme' : 'Femme'}</p>
+              </div>
+              {prescription.patient.phoneNumber && (
+                <div>
+                  <span className="text-slate-400 font-bold uppercase tracking-wider block text-[10px]">Téléphone</span>
+                  <p className="font-bold text-slate-700 mt-1">{prescription.patient.phoneNumber}</p>
+                </div>
+              )}
+            </div>
+          </section>
+
+          {/* Title Banner */}
+          <div className="text-center py-2.5 bg-slate-100 rounded-xl mb-8 border border-slate-200/50 print:bg-white print:border">
+            <span className="text-sm font-extrabold text-slate-800 tracking-wide uppercase">{docTitle}</span>
+          </div>
+
+          {/* Exams List Container */}
+          <div className="space-y-8 min-h-[400px]">
+            {/* Medicines */}
+            {hasMedicines && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b-2 border-emerald-200 pb-1.5">
+                  <Pill className="h-5 w-5 text-emerald-600" />
+                  <h3 className="text-md font-extrabold text-emerald-950 uppercase tracking-wide">Traitement Médical</h3>
+                </div>
+                <ul className="space-y-4 pl-4 mt-4">
+                  {prescription.medicines.map((med, idx) => (
+                    <li key={idx} className="border-b border-dashed border-gray-150 pb-3">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-base font-extrabold text-gray-800">{idx + 1}. {med.name}</span>
+                        {(med.dosage || med.duration) && (
+                          <span className="text-sm font-bold text-gray-600">
+                            {med.dosage && <span>{med.dosage}</span>}
+                            {med.dosage && med.duration && <span className="mx-2 text-gray-400">|</span>}
+                            {med.duration && <span>{med.duration}</span>}
+                          </span>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {/* Biological Analyses */}
+            {hasAnalyses && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b-2 border-purple-200 pb-1.5">
+                  <FlaskConical className="h-5 w-5 text-purple-600" />
+                  <h3 className="text-md font-extrabold text-purple-950 uppercase tracking-wide">1. Analyses Biologiques (Bilan Biologique)</h3>
+                </div>
+                <div className="grid grid-cols-2 gap-x-6 gap-y-2 pl-4">
+                  {prescription.analyses.map((ana, idx) => (
+                    <div key={idx} className="flex gap-2 items-center text-sm text-gray-800 border-b border-dashed border-gray-150 pb-1">
+                      <span className="font-bold text-purple-400">{idx + 1}.</span>
+                      <span className="font-extrabold">{ana.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Radiology & Medical Imaging */}
+            {hasRadios && (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 border-b-2 border-indigo-200 pb-1.5">
+                  <RadioIcon className="h-5 w-5 text-indigo-600" />
+                  <h3 className="text-md font-extrabold text-indigo-950 uppercase tracking-wide">2. Imagerie Médicale & Radiographies</h3>
+                </div>
+                <ul className="space-y-3.5 pl-4">
+                  {prescription.radios.map((rad, idx) => (
+                    <li key={idx} className="border-b border-dashed border-gray-150 pb-2">
+                      <div className="flex justify-between items-baseline">
+                        <span className="text-sm font-extrabold text-gray-800">{idx + 1}. {rad.name}</span>
+                      </div>
+                      {rad.notes && (
+                        <p className="text-xs text-slate-400 font-semibold italic mt-0.5 pl-4">
+                          Note / Incidence: {rad.notes}
+                        </p>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* General Notes */}
+            {prescription.notes && (
+              <div className="pt-6 border-t border-slate-100">
+                <h4 className="font-extrabold text-xs text-slate-400 uppercase tracking-wider mb-2">Indications Cliniques Spécifiques :</h4>
+                <p className="text-xs text-slate-600 font-medium italic leading-relaxed bg-slate-50/60 p-4 rounded-xl border border-slate-100 whitespace-pre-line">
+                  "{prescription.notes}"
+                </p>
               </div>
             )}
           </div>
-        </section>
+        </div>
 
-        {/* Medicines */}
-        <section className="min-h-[300px]">
-          <ul className="space-y-6">
-            {prescription.medicines.map((med, idx) => (
-              <li key={idx} className="flex gap-4 items-start border-b border-gray-100 pb-4">
-                <span className="font-bold text-gray-400 text-lg mt-0.5">{idx + 1}.</span>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">{med.name}</h3>
-                  <div className="flex gap-6 mt-2 text-gray-700">
-                    <p><span className="font-semibold text-gray-500">{t('printPrescription.dosage')}</span> {med.dosage}</p>
-                    <p><span className="font-semibold text-gray-500">{t('printPrescription.duration')}</span> {med.duration}</p>
-                  </div>
-                </div>
-              </li>
-            ))}
-          </ul>
-
-          {prescription.notes && (
-            <div className="mt-8 pt-8 border-t border-gray-100">
-              <h4 className="font-semibold text-gray-900 mb-2">{t('printPrescription.doctorNotes')}</h4>
-              <p className="text-gray-700 italic">{prescription.notes}</p>
-            </div>
-          )}
-        </section>
-
-        {/* Signatures */}
-        <footer className="mt-24 flex justify-end">
+        {/* Footer & Signature */}
+        <footer className="mt-16 flex justify-between items-end border-t border-slate-100 pt-6">
+          <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+            Document clinique officiel · MaClinic OS
+          </div>
           <div className="text-center">
-            <div className="w-48 border-b border-gray-400 mb-2"></div>
-            <p className="font-semibold text-gray-800">{prescription.doctor.name}</p>
-            <p className="text-sm text-gray-500">{t('printPrescription.signature')}</p>
+            <div className="w-48 border-b border-slate-400 mb-2"></div>
+            <p className="font-bold text-gray-800 text-xs">Dr. {prescription.doctor.name}</p>
+            <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Signature & Cachet du Médecin</p>
           </div>
         </footer>
       </div>

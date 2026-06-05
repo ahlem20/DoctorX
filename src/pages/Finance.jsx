@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../components/ui/table';
 import { Coins, TrendingUp, Calendar, CreditCard, Activity, Sparkles, Receipt, Plus, Trash2, Wallet, TrendingDown } from 'lucide-react';
@@ -14,24 +14,21 @@ export default function Finance() {
   const [prescriptions, setPrescriptions] = useState([]);
   const [charges, setCharges] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState({
-    totalRevenue: 0,
-    totalExpenses: 0,
-    netProfit: 0,
-    thisMonthRevenue: 0,
-    thisMonthExpenses: 0,
-    thisMonthProfit: 0,
-    todayRevenue: 0,
-    todayExpenses: 0,
-    todayProfit: 0
+  const [filterType, setFilterType] = useState('all'); // all | day | month | range
+  const [filterDate, setFilterDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [filterMonth, setFilterMonth] = useState(() => new Date().toISOString().substring(0, 7));
+  const [rangeStart, setRangeStart] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 30);
+    return d.toISOString().split('T')[0];
   });
-  const [chartData, setChartData] = useState([]);
+  const [rangeEnd, setRangeEnd] = useState(() => new Date().toISOString().split('T')[0]);
 
   // Form State
   const [desc, setDesc] = useState('');
   const [amount, setAmount] = useState('');
   const [category, setCategory] = useState('Autre');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [date, setDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [submitting, setSubmitting] = useState(false);
 
   const fetchFinances = async () => {
@@ -40,101 +37,223 @@ export default function Finance() {
         api.get('/prescriptions'),
         api.get('/charges')
       ]);
-      const presData = prescriptionsRes.data;
-      const chgData = chargesRes.data;
-
-      setPrescriptions(presData);
-      setCharges(chgData);
-
-      // Calculations
-      let totalRevenue = 0;
-      let thisMonthRevenue = 0;
-      let todayRevenue = 0;
-
-      let totalExpenses = 0;
-      let thisMonthExpenses = 0;
-      let todayExpenses = 0;
-
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-
-      // 7 days chart array
-      const last7Days = Array.from({ length: 7 }, (_, i) => {
-        const d = new Date();
-        d.setDate(d.getDate() - (6 - i));
-        d.setHours(0, 0, 0, 0);
-        return {
-          date: d,
-          label: d.toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { weekday: 'short' }),
-          revenue: 0,
-          expenses: 0,
-          profit: 0
-        };
-      });
-
-      // Sum prescription revenue
-      presData.forEach((p) => {
-        const price = p.price || 0;
-        const pDate = new Date(p.createdAt);
-
-        totalRevenue += price;
-        if (pDate >= startOfMonth) thisMonthRevenue += price;
-        if (pDate >= startOfToday) todayRevenue += price;
-
-        const dayMatch = last7Days.find(d =>
-          pDate.getFullYear() === d.date.getFullYear() &&
-          pDate.getMonth() === d.date.getMonth() &&
-          pDate.getDate() === d.date.getDate()
-        );
-        if (dayMatch) {
-          dayMatch.revenue += price;
-        }
-      });
-
-      // Sum charge expenses
-      chgData.forEach((c) => {
-        const amountVal = c.amount || 0;
-        const cDate = new Date(c.date);
-
-        totalExpenses += amountVal;
-        if (cDate >= startOfMonth) thisMonthExpenses += amountVal;
-        if (cDate >= startOfToday) todayExpenses += amountVal;
-
-        const dayMatch = last7Days.find(d =>
-          cDate.getFullYear() === d.date.getFullYear() &&
-          cDate.getMonth() === d.date.getMonth() &&
-          cDate.getDate() === d.date.getDate()
-        );
-        if (dayMatch) {
-          dayMatch.expenses += amountVal;
-        }
-      });
-
-      // Calculate profit for chart and stats
-      last7Days.forEach(day => {
-        day.profit = day.revenue - day.expenses;
-      });
-
-      setStats({
-        totalRevenue,
-        totalExpenses,
-        netProfit: totalRevenue - totalExpenses,
-        thisMonthRevenue,
-        thisMonthExpenses,
-        thisMonthProfit: thisMonthRevenue - thisMonthExpenses,
-        todayRevenue,
-        todayExpenses,
-        todayProfit: todayRevenue - todayExpenses
-      });
-
-      setChartData(last7Days);
+      setPrescriptions(prescriptionsRes.data);
+      setCharges(chargesRes.data);
     } catch (error) {
       console.error('Error fetching finance data', error);
     } finally {
       setLoading(false);
     }
   };
+
+  // Memoized Filtered Lists
+  const filteredData = useMemo(() => {
+    let startLimit = null;
+    let endLimit = null;
+
+    if (filterType === 'day') {
+      const d = new Date(filterDate);
+      startLimit = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+      endLimit = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+    } else if (filterType === 'month') {
+      const [year, month] = filterMonth.split('-').map(Number);
+      startLimit = new Date(year, month - 1, 1, 0, 0, 0, 0);
+      endLimit = new Date(year, month, 0, 23, 59, 59, 999);
+    } else if (filterType === 'range') {
+      const start = new Date(rangeStart);
+      const end = new Date(rangeEnd);
+      startLimit = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 0, 0, 0, 0);
+      endLimit = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+    }
+
+    const filterFn = (itemDate) => {
+      if (!startLimit || !endLimit) return true;
+      return itemDate >= startLimit && itemDate <= endLimit;
+    };
+
+    const filteredPres = prescriptions.filter(p => filterFn(new Date(p.createdAt)));
+    const filteredChg = charges.filter(c => filterFn(new Date(c.date)));
+
+    return {
+      prescriptions: filteredPres,
+      charges: filteredChg
+    };
+  }, [prescriptions, charges, filterType, filterDate, filterMonth, rangeStart, rangeEnd]);
+
+  // Memoized Stats Calculations
+  const stats = useMemo(() => {
+    let totalRevenue = 0;
+    let totalExpenses = 0;
+
+    filteredData.prescriptions.forEach(p => {
+      totalRevenue += p.price || 0;
+    });
+
+    filteredData.charges.forEach(c => {
+      totalExpenses += c.amount || 0;
+    });
+
+    // Subtext stats (always showing current month/today for general context in 'all' view)
+    let thisMonthRevenue = 0;
+    let thisMonthExpenses = 0;
+    let todayRevenue = 0;
+    let todayExpenses = 0;
+
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+    prescriptions.forEach(p => {
+      const price = p.price || 0;
+      const pDate = new Date(p.createdAt);
+      if (pDate >= startOfMonth) thisMonthRevenue += price;
+      if (pDate >= startOfToday) todayRevenue += price;
+    });
+
+    charges.forEach(c => {
+      const amountVal = c.amount || 0;
+      const cDate = new Date(c.date);
+      if (cDate >= startOfMonth) thisMonthExpenses += amountVal;
+      if (cDate >= startOfToday) todayExpenses += amountVal;
+    });
+
+    return {
+      totalRevenue,
+      totalExpenses,
+      netProfit: totalRevenue - totalExpenses,
+      thisMonthRevenue,
+      thisMonthExpenses,
+      thisMonthProfit: thisMonthRevenue - thisMonthExpenses,
+      todayRevenue,
+      todayExpenses,
+      todayProfit: todayRevenue - todayExpenses
+    };
+  }, [filteredData, prescriptions, charges]);
+
+  // Memoized Chart Data
+  const chartData = useMemo(() => {
+    let chartArray = [];
+    let isMonthly = false;
+
+    if (filterType === 'all') {
+      const days = 30;
+      chartArray = Array.from({ length: days }, (_, i) => {
+        const d = new Date();
+        d.setDate(d.getDate() - (days - 1 - i));
+        d.setHours(0, 0, 0, 0);
+        return {
+          date: d,
+          label: d.toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'short' }),
+          revenue: 0,
+          expenses: 0,
+          profit: 0
+        };
+      });
+    } else if (filterType === 'day') {
+      chartArray = Array.from({ length: 7 }, (_, i) => {
+        const d = new Date(filterDate);
+        d.setDate(d.getDate() - (6 - i));
+        d.setHours(0, 0, 0, 0);
+        return {
+          date: d,
+          label: d.toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { weekday: 'short', day: 'numeric' }),
+          revenue: 0,
+          expenses: 0,
+          profit: 0
+        };
+      });
+    } else if (filterType === 'month') {
+      const [year, month] = filterMonth.split('-').map(Number);
+      const daysInMonth = new Date(year, month, 0).getDate();
+      chartArray = Array.from({ length: daysInMonth }, (_, i) => {
+        const d = new Date(year, month - 1, i + 1);
+        d.setHours(0, 0, 0, 0);
+        return {
+          date: d,
+          label: d.toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric' }),
+          revenue: 0,
+          expenses: 0,
+          profit: 0
+        };
+      });
+    } else if (filterType === 'range') {
+      const start = new Date(rangeStart);
+      const end = new Date(rangeEnd);
+      const diffTime = Math.abs(end - start);
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+      if (diffDays <= 90) {
+        chartArray = Array.from({ length: diffDays }, (_, i) => {
+          const d = new Date(start);
+          d.setDate(d.getDate() + i);
+          d.setHours(0, 0, 0, 0);
+          return {
+            date: d,
+            label: d.toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'short' }),
+            revenue: 0,
+            expenses: 0,
+            profit: 0
+          };
+        });
+      } else {
+        isMonthly = true;
+        let cur = new Date(start.getFullYear(), start.getMonth(), 1);
+        const endMonth = new Date(end.getFullYear(), end.getMonth(), 1);
+        while (cur <= endMonth) {
+          chartArray.push({
+            date: new Date(cur),
+            label: cur.toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { month: 'short', year: 'numeric' }),
+            revenue: 0,
+            expenses: 0,
+            profit: 0
+          });
+          cur.setMonth(cur.getMonth() + 1);
+        }
+      }
+    }
+
+    prescriptions.forEach((p) => {
+      const price = p.price || 0;
+      const pDate = new Date(p.createdAt);
+
+      const match = chartArray.find(item => {
+        if (isMonthly) {
+          return pDate.getFullYear() === item.date.getFullYear() && pDate.getMonth() === item.date.getMonth();
+        } else {
+          return pDate.getFullYear() === item.date.getFullYear() &&
+                 pDate.getMonth() === item.date.getMonth() &&
+                 pDate.getDate() === item.date.getDate();
+        }
+      });
+      if (match) {
+        match.revenue += price;
+      }
+    });
+
+    charges.forEach((c) => {
+      const amountVal = c.amount || 0;
+      const cDate = new Date(c.date);
+
+      const match = chartArray.find(item => {
+        if (isMonthly) {
+          return cDate.getFullYear() === item.date.getFullYear() && cDate.getMonth() === item.date.getMonth();
+        } else {
+          return cDate.getFullYear() === item.date.getFullYear() &&
+                 cDate.getMonth() === item.date.getMonth() &&
+                 cDate.getDate() === item.date.getDate();
+        }
+      });
+      if (match) {
+        match.expenses += amountVal;
+      }
+    });
+
+    chartArray.forEach(item => {
+      item.profit = item.revenue - item.expenses;
+    });
+
+    return chartArray;
+  }, [prescriptions, charges, filterType, filterDate, filterMonth, rangeStart, rangeEnd, i18n.language]);
 
   useEffect(() => {
     fetchFinances();
@@ -205,12 +324,33 @@ export default function Finance() {
     }
   };
 
+  const filterSubtext = useMemo(() => {
+    if (filterType === 'all') return '';
+    if (filterType === 'day') {
+      const formattedDate = new Date(filterDate).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'long', year: 'numeric' });
+      return t('finance.filter.subtext.day', { date: formattedDate });
+    }
+    if (filterType === 'month') {
+      const [y, m] = filterMonth.split('-');
+      const formattedMonth = new Date(Number(y), Number(m) - 1).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { month: 'long', year: 'numeric' });
+      return t('finance.filter.subtext.month', { date: formattedMonth });
+    }
+    if (filterType === 'range') {
+      const startStr = new Date(rangeStart).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'short' });
+      const endStr = new Date(rangeEnd).toLocaleDateString(i18n.language === 'ar' ? 'ar-DZ' : 'fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+      return t('finance.filter.subtext.range', { from: startStr, to: endStr });
+    }
+    return '';
+  }, [filterType, filterDate, filterMonth, rangeStart, rangeEnd, i18n.language, t]);
+
   const statCards = [
     {
       title: t('finance.stat.totRev'),
       value: stats.totalRevenue,
-      subtext: `${t('finance.stat.thisMonth')} +${stats.thisMonthRevenue.toLocaleString()} DA`,
-      description: t('finance.stat.revHist'),
+      subtext: filterType === 'all' 
+        ? `${t('finance.stat.thisMonth')} +${stats.thisMonthRevenue.toLocaleString()} DA` 
+        : filterSubtext,
+      description: filterType === 'all' ? t('finance.stat.revHist') : t('finance.filter.title'),
       icon: Coins,
       color: 'text-teal-500',
       bg: 'bg-teal-50 dark:bg-teal-950/30 border-teal-100 dark:border-teal-900/30'
@@ -218,8 +358,10 @@ export default function Finance() {
     {
       title: t('finance.stat.totExp'),
       value: stats.totalExpenses,
-      subtext: `${t('finance.stat.thisMonth')} -${stats.thisMonthExpenses.toLocaleString()} DA`,
-      description: t('finance.stat.expDesc'),
+      subtext: filterType === 'all' 
+        ? `${t('finance.stat.thisMonth')} -${stats.thisMonthExpenses.toLocaleString()} DA` 
+        : filterSubtext,
+      description: filterType === 'all' ? t('finance.stat.expDesc') : t('finance.filter.title'),
       icon: TrendingDown,
       color: 'text-rose-500',
       bg: 'bg-rose-50 dark:bg-rose-950/30 border-rose-100 dark:border-rose-900/30'
@@ -227,8 +369,10 @@ export default function Finance() {
     {
       title: t('finance.stat.netProf'),
       value: stats.netProfit,
-      subtext: `${t('finance.stat.thisMonth')} ${stats.thisMonthProfit >= 0 ? '+' : ''}${stats.thisMonthProfit.toLocaleString()} DA`,
-      description: t('finance.stat.profDesc'),
+      subtext: filterType === 'all' 
+        ? `${t('finance.stat.thisMonth')} ${stats.thisMonthProfit >= 0 ? '+' : ''}${stats.thisMonthProfit.toLocaleString()} DA` 
+        : filterSubtext,
+      description: filterType === 'all' ? t('finance.stat.profDesc') : t('finance.filter.title'),
       icon: Wallet,
       color: stats.netProfit >= 0 ? 'text-indigo-500' : 'text-rose-500',
       bg: stats.netProfit >= 0 
@@ -250,6 +394,113 @@ export default function Finance() {
 
   return (
     <div className="space-y-8 animate-in fade-in-50 duration-500">
+      {/* Date Filtering Controls */}
+      <Card className="border border-slate-200/60 bg-white/80 backdrop-blur-md shadow-sm">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="space-y-1">
+              <h3 className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <Calendar className="h-4 w-4 text-indigo-500" />
+                {t('finance.filter.title')}
+              </h3>
+              <p className="text-[11px] text-slate-400 font-medium">
+                {filterType === 'all'
+                  ? t('finance.filter.subtext.all')
+                  : filterSubtext}
+              </p>
+            </div>
+
+            {/* Mode selection buttons */}
+            <div className="flex flex-wrap gap-1.5 bg-slate-100 p-1 rounded-xl border border-slate-200/50 self-start md:self-auto">
+              <button
+                type="button"
+                onClick={() => setFilterType('all')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${filterType === 'all' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('finance.filter.all')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterType('day')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${filterType === 'day' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('finance.filter.day')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterType('month')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${filterType === 'month' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('finance.filter.month')}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFilterType('range')}
+                className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${filterType === 'range' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+              >
+                {t('finance.filter.range')}
+              </button>
+            </div>
+          </div>
+
+          {/* Conditional inputs */}
+          {filterType !== 'all' && (
+            <div className="mt-4 pt-4 border-t border-slate-100 flex flex-wrap gap-4 items-end animate-in slide-in-from-top-2 duration-200">
+              {filterType === 'day' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="filter-day" className="text-xs text-slate-500 font-bold">{t('finance.filter.selectDay')}</Label>
+                  <Input
+                    id="filter-day"
+                    type="date"
+                    value={filterDate}
+                    onChange={(e) => setFilterDate(e.target.value)}
+                    className="w-48 text-xs font-bold focus-visible:ring-indigo-500"
+                  />
+                </div>
+              )}
+
+              {filterType === 'month' && (
+                <div className="space-y-1.5">
+                  <Label htmlFor="filter-month" className="text-xs text-slate-500 font-bold">{t('finance.filter.selectMonth')}</Label>
+                  <Input
+                    id="filter-month"
+                    type="month"
+                    value={filterMonth}
+                    onChange={(e) => setFilterMonth(e.target.value)}
+                    className="w-48 text-xs font-bold focus-visible:ring-indigo-500"
+                  />
+                </div>
+              )}
+
+              {filterType === 'range' && (
+                <>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="filter-start" className="text-xs text-slate-500 font-bold">{t('finance.filter.startDate')}</Label>
+                    <Input
+                      id="filter-start"
+                      type="date"
+                      value={rangeStart}
+                      onChange={(e) => setRangeStart(e.target.value)}
+                      className="w-44 text-xs font-bold focus-visible:ring-indigo-500"
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="filter-end" className="text-xs text-slate-500 font-bold">{t('finance.filter.endDate')}</Label>
+                    <Input
+                      id="filter-end"
+                      type="date"
+                      value={rangeEnd}
+                      onChange={(e) => setRangeEnd(e.target.value)}
+                      className="w-44 text-xs font-bold focus-visible:ring-indigo-500"
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       {/* Financial Stats Summary */}
       <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
         {statCards.map((stat, idx) => (
@@ -284,7 +535,15 @@ export default function Finance() {
               </CardTitle>
               <p className="text-xs text-slate-400 font-medium">{t('finance.chart.subtitle')}</p>
             </div>
-            <span className="px-2 py-0.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full tracking-wider uppercase">{t('finance.chart.cycle')}</span>
+            <span className="px-2 py-0.5 text-[9px] font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 rounded-full tracking-wider uppercase">
+              {filterType === 'all'
+                ? t('finance.chart.cycle.all')
+                : filterType === 'day'
+                ? t('finance.chart.cycle.day')
+                : filterType === 'month'
+                ? t('finance.chart.cycle.month')
+                : t('finance.chart.cycle.range')}
+            </span>
           </CardHeader>
           <CardContent className="pt-6">
             <div className="h-72 w-full mt-2">
@@ -341,7 +600,7 @@ export default function Finance() {
             <div className="max-h-[300px] overflow-y-auto">
               <Table>
                 <TableBody>
-                  {prescriptions.slice(0, 10).map((p, index) => (
+                  {filteredData.prescriptions.slice(0, 10).map((p, index) => (
                     <TableRow
                       key={p._id}
                       className="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors animate-in fade-in-25 duration-300"
@@ -365,7 +624,7 @@ export default function Finance() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {prescriptions.length === 0 && (
+                  {filteredData.prescriptions.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={2} className="text-center py-12 text-slate-400">
                         <div className="flex flex-col items-center gap-1 justify-center">
@@ -478,7 +737,7 @@ export default function Finance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {charges.map((c, index) => (
+                  {filteredData.charges.map((c, index) => (
                     <TableRow
                       key={c._id}
                       className="hover:bg-slate-50 border-b border-slate-100 last:border-0 transition-colors animate-in fade-in-25 duration-300"
@@ -508,7 +767,7 @@ export default function Finance() {
                       </TableCell>
                     </TableRow>
                   ))}
-                  {charges.length === 0 && (
+                  {filteredData.charges.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={5} className="text-center py-12 text-slate-400">
                         <div className="flex flex-col items-center gap-1 justify-center">
