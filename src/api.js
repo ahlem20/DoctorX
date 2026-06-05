@@ -24,6 +24,13 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
+    if (error.response && error.response.status === 401) {
+      const isAuthRequest = error.config && error.config.url && (error.config.url.includes('/auth/login') || error.config.url.includes('/auth/register'));
+      if (!isAuthRequest) {
+        localStorage.removeItem('userInfo');
+        window.location.href = '/login';
+      }
+    }
     if (
       error.response &&
       error.response.status === 403 &&
